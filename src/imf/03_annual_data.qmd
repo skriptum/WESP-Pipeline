@@ -1,0 +1,234 @@
+# IMF: Annual Data
+
+
+```{r}
+library(tidyverse)
+library(rsdmx)
+```
+
+```{r}
+imf_CONV <- readxl::read_excel("../../data/imf_CONV.xlsx") 
+
+imf_CONV <- imf_CONV %>%
+  # filter for non-country codes (eg longer than 3)
+  filter(nchar(ISO) <= 3)
+```
+
+## Exchange Rates
+
+- WESP Code: *_rfx_ncdol
+- WESP Desc: Exchange rates, domestic currency per usd, period average, rate
+- IMF Database: [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER)
+- IMF Code: XDC_USD
+
+```{r}
+flowref <- 'ER'
+key <- "*.XDC_USD.PA_RT.A"
+```
+
+```{r}
+dataset_ER <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key,
+                                  ))
+```
+
+```{r}
+df_ER <- dataset_ER %>%
+  filter(TIME_PERIOD >= 1920) %>%
+  arrange(TIME_PERIOD) %>%
+  inner_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Exchange rates, domestic currency per usd, period average, rate",
+    `Indicator Code` = "XDC_USD",
+    `Attribute` = "Value",
+    TIME_PERIOD = gsub("-", "", TIME_PERIOD),
+    OBS_VALUE = as.numeric(OBS_VALUE)
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) 
+  
+
+head(df_ER)
+```
+
+```{r}
+visdat::vis_dat(df_ER)
+```
+
+## CPI
+
+- WESP Code: 
+  - *PCPI, 
+  - *PCPI_GR
+- WESP Desc:
+  - Prices, Consumer Price Index, All items, Index
+  - Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent
+  
+- IMF Database: [Consumer Price Index](https://data.imf.org/en/datasets/IMF.STA:CPI)
+- IMF Code:
+  - CPI; IX
+  - CPI; YOY_PCH_PA_PT
+
+```{r}
+flowref <- 'CPI'
+key_CPI <- "*.CPI._T.IX+YOY_PCH_PA_PT.A"
+```
+
+```{r}
+dataset_CPI <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key_CPI,
+                                  start=1960
+                                  ))
+```
+
+
+```{r}
+df_CPI <- dataset_CPI %>%
+  arrange(TIME_PERIOD) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+     `Country Name` = Name,
+     `Country Code` = Code,
+     `Indicator Name` = case_when(
+       TYPE_OF_TRANSFORMATION == "IX" ~ "Prices, Consumer Price Index, All items, Index",
+       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent"
+     ),
+     `Indicator Code` = case_when(
+       TYPE_OF_TRANSFORMATION == "IX" ~ "PCPI",
+       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "PCPI_GR"
+     ),
+     Attribute = "Value",
+     OBS_VALUE = as.numeric(OBS_VALUE),
+     TIME_PERIOD)  %>%
+  filter(!is.na(`Indicator Code`)) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  )
+
+df_CPI
+```
+
+Missing values visualization for CPI %
+```{r}
+df_CPI %>%
+  filter(`Indicator Code` == "PCPI_GR") %>%
+  visdat::vis_dat() +
+  labs(title = "CPI % Missing Values Visualization")
+```
+
+
+Missing values visualization for CPI Index
+```{r}
+df_CPI %>%
+  filter(`Indicator Code` == "PCPI") %>%
+  visdat::vis_dat() + 
+  labs(title = "CPI Index Missing Values Visualization")
+```
+
+## Current Account
+
+- WESP Code: *BCANET$
+- WESP Desc: Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars
+
+- IMF Database: [WEO](https://data.imf.org/en/datasets/IMF.RES:WEO)
+- IMF Code: BCA
+
+```{r}
+flowref <- 'WEO'
+key <- "*.BCA.A"
+```
+
+```{r}
+dataset_CA <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key,
+                                  start=1960,
+                                  end = year(Sys.Date())
+                                  ))
+```
+
+```{r}
+df_CA <- dataset_CA %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  arrange(TIME_PERIOD) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars",
+    `Indicator Code` = "BCANET$",
+    `Attribute` = "Value",
+    OBS_VALUE = as.numeric(OBS_VALUE),
+    TIME_PERIOD
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) %>%
+  select(-`NA`) 
+```
+
+```{r}
+visdat::vis_dat(df_CA) + 
+  labs(title = "Current Account Missing Values Visualization")
+```
+
+## Money Supply M2
+
+- WESP Code: *BMS_M2$
+- WESP Desc: Monetary, M2, Domestic Currency
+- IMF Database: [Monetary and Financial Statistics: Monetary Aggregates](https://data.imf.org/en/datasets/IMF.STA:MFS_MA)
+- IMF Code: BM_MAI; XDC
+- IMF Desc: Broad Money
+
+NOTE: Check that broad money = M2 in the definitions
+
+```{r}
+flowref <- 'MFS_MA'
+key <- "*.BM_MAI.XDC.A"
+```
+
+```{r}
+dataset_M2 <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key,
+                                  start=1960
+                                  ))
+```
+
+```{r}
+df_M2 <- dataset_M2 %>%
+  arrange(TIME_PERIOD) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Money and Quasi Money, Broad Money (M2), US Dollars",
+    `Indicator Code` = "BMS_M2$",
+    `Attribute` = "Value",
+    OBS_VALUE = as.numeric(OBS_VALUE),
+    TIME_PERIOD
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) %>%
+  select(-`NA`)
+```
+
+```{r}
+visdat::vis_dat(df_M2) + 
+  labs(title = "Money Supply M2 Missing Values Visualization")
+```
+
+## Interest Expense

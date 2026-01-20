@@ -1,0 +1,126 @@
+# IMF Monthly Data
+
+```{r}
+library(tidyverse)
+library(rsdmx)
+```
+```{r}
+imf_CONV <- readxl::read_excel("../../data/00_raw/imf_CONV.xlsx") 
+```
+
+
+
+## Exchange Rates
+
+- WESP Code: *_rfx_ncdol
+- Description: Exchange rates, domestic currency per usd, period average, rate
+
+- IMF Database: [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER)
+- Indicator: XDC_USD
+
+```{r}
+flowref <- 'ER'
+key <- "*.XDC_USD.PA_RT.M"
+```
+
+```{r}
+dataset_ER <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key,
+                                  ))
+```
+
+```{r}
+df_ER <- dataset_ER %>%
+  filter(TIME_PERIOD >= 1960) %>%
+  arrange(TIME_PERIOD) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Exchange rates, domestic currency per usd, period average, rate",
+    `Indicator Code` = "XDC_USD",
+    `Attribute` = "Value",
+    TIME_PERIOD = gsub("-", "", TIME_PERIOD),
+    OBS_VALUE
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) 
+
+head(df_ER)
+```
+```{r}
+visdat::vis_miss(df_ER)
+```
+Missing: explained by unused rows that are aggregates etc.
+
+## Interest Rates
+
+- Wesp Code: *_rird
+- Desc: Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum
+
+- IMF Database: [Monetary and Financial Statistics: Interest Rates](https://data.imf.org/en/datasets/IMF.STA:MFS_IR)
+- Indicator: MFS_166_RT_PT_A_PT
+
+```{r}
+flowref <- 'MFS_IR'
+key <- "*.MFS166_RT_PT_A_PT.M"
+```
+
+```{r}
+dataset_IR <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
+                                  resource = 'data',
+                                  flowRef = flowref,
+                                  key = key,
+                                  ))
+```
+
+```{r}
+df_IR <- dataset_IR %>%
+  filter(
+    TIME_PERIOD >= 1960,
+    is.na(TIME_PERIOD) == FALSE
+    ) %>%
+  arrange(TIME_PERIOD) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum",
+    `Indicator Code` = "MFS_166_RT_PT_A_PT",
+    `Attribute` = "Value",
+    TIME_PERIOD = gsub("-", "", TIME_PERIOD),
+    OBS_VALUE
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) 
+
+df_IR
+```
+
+```{r}
+visdat::vis_miss(df_IR)
+```
+
+```{r}
+df_IR %>%
+  filter(`Country Name` == "Germany")
+```
+
+
+
+## Combining Data
+
+```{r}
+df_imf_monthly <- bind_rows(df_ER, df_IR)
+```
+
+```{r}
+writexl::write_xlsx(df_imf_monthly, "../../data/01_IMF_processed/imf_monthly.xlsx")
+```
+

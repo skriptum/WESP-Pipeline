@@ -1,0 +1,17 @@
+# 01 IMF: Taking a look at the required data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+df_imf <- read_csv("../../examples/IMF/developing_annual.csv")
+```
+
+```{r}
+df_imf %>%
+  filter(
+    `Country Name`== "Canada"
+  ) 
+```
+
