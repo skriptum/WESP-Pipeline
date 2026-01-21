@@ -6,7 +6,70 @@
 - uses the [SDMX](https://www.sdmx.io/) API Schema to access a range of economic databases from different organisations ([IMF](https://data.imf.org/en), [OECD](https://data-explorer.oecd.org/), [OECD](https://ec.europa.eu/eurostat/data/database))
 - coded in R (mostly [Quarto](https://quarto.org/) Markdown Files), with a lot of comments in the files itself
 
-This file explains the basic project structure, how the workflow works schematically, as well as how to use it
+
+
+## Workflow
+
+The basic intution behind the pipeline is like this: take some Databases, clean them, take some additional files to format them to the WEFM expecations, and then output some excel files to be ingested into Eviews.
+
+Here is an example for the IMF annual data:
+
+```mermaid
+graph LR
+
+subgraph ./src/imf/
+R(03_annual_data.qmd)
+end
+
+subgraph ./data/imf_processed/
+1 & 2 & 3
+end
+
+subgraph ./data/raw/
+B[[imf_CONV.xlsx]]
+end
+
+subgraph ./src/utils
+a(save_timestamp.R)
+b(imf_split.R)
+end
+
+I[(IMF Databases)] --SDMX API--> R  
+B --ISO translation--> R
+R <--calls--> b --cleaned--> 1[[adv_annual.xlsx]] & 2[[developing_annual.xlsx]] & 3[[other_annual.xlsx]] 
+R <--calls--> a --timestamp--> 4[last_successful_run.csv]
+
+```
+
+1. access some IMF databases (e.g for Interest Rates or Balance of Payments) via the SDMX API
+2. clean and transform it using the *tidyverse* packages
+3. add the relevant country codes for WEFM from `imf_CONV.xlsx`
+4. split it into the country groupings using the utility script `imf_split.qmd`
+5. save the excel files into the `data/imf_processed` folder
+6. update the timestamp for last accessed in the `LOG.csv` 
+
+
+
+## Usage
+
+1. To get started with the project, you have to use `renv`, which is used to keep the package versions synced and up to date.
+```
+install.packages("renv") # install renv if you don't have it yet renv::restore() # restore the environment
+```
+
+2. After that, run the respective quarto files in the folder `src/` 
+   (e.g `src/imf/03_annual_data.qmd` for annual IMF data). Each of these files is independent and can be run separately.
+   - Either open the files in RStudio and run them from there (easier)
+     - Make sure to use the option in the top right **Run -> Restart R and run all Chunks** to have a clean slate in each run
+   - Alternatively, run the whole file via the command line:
+   ```
+   quarto render src/imf/03_annual_data.qmd
+   ```
+   - *In the long run, this could be automated using a Makefile or similar, but for now, this is sufficient.*
+
+3. Check in the `LOG.csv` file to see when the last run was for each data source.
+
+*Feel free to go into each Quarto Code file and look at it before running it, there are a some more comments in there too to explain how it works*
 
 ## Project Structure
 
@@ -32,50 +95,6 @@ Hres a file tree with a little explanation
 ├── README.md               # this file  
 └── renv.lock               # renv lock file
 ```
-
-
-
-## Workflow
-
-The basic intution behind the pipeline is like this: take some Databases, clean them, take some additional files to format them to the WEFM expecations, and then output some excel files to be ingested into Eviews.
-
-Here is an example for the IMF annual data:
-
-```mermaid
-graph LR
-
-subgraph ./src/imf/*.qmd
-R{03_annual_data.qmd}
-end
-
-subgraph ./data/imf_processed/
-1 & 2 & 3
-end
-
-subgraph ./data/raw
-A[["Regions.xlsx (via src/utils/)"]] & B[[imf_CONV.xlsx]]
-end
-
-I[(IMF Databases)] --SDMX API--> R 
-A --"country grouping"--> R 
-B --code translation--> R
-R --cleaned--> 1[[adv_annual.xlsx]] & 2[[developing_annual.xlsx]] & 3[[other_annual.xlsx]] 
-R --timestamp--> 4[./data/LOG.csv]
-
-```
-
-1. access some IMF databases (e.g for Interest Rates or Balance of Payments) via the SDMX API
-2. clean and transform it using the *tidyverse* packages
-3. add the relevant country codes for WEFM from `imf_CONV.xlsx`
-4. split it into the country groupings using `Regions.xlsx` (with a helper function in the utils)
-5. output the split excel files into the `data/imf_processed` folder
-6. update the timestamp for last accessed in the `LOG.csv` 
-
-
-
-## Usage
-
-
 
 
 

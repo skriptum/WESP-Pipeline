@@ -1,17 +1,61 @@
 # 01 IMF: Taking a look at the required data
 
+## Load data
 ```{r}
 library(tidyverse)
 ```
 
 ```{r}
-df_imf <- read_csv("../../examples/IMF/developing_annual.csv")
+df_imf <- read_csv("../../examples/imf/adv_annual.csv")
+```
+
+## Exploration 
+
+```{r}
+head(df_imf, 100)
+```
+
+Number of Countries in the dataset = 42 (in advanced)
+```{r}
+df_imf %>% 
+  arrange(`Country Name`) %>%
+  distinct(`Country Name`) # %>% nrow()
+```
+
+Number of Indicators = 1262 (in advanced)
+```{r}
+df_imf %>% distinct(`Indicator Code`) %>% nrow()
+```
+
+although for many countries not all of these are available, e.g Canada only has 630
+```{r}
+df_imf %>%
+  filter(`Country Name` == "Canada") %>%
+  distinct(`Indicator Code`) %>%
+  nrow()
+```
+
+Visualisation of missing data
+```{r}
+df_imf %>%
+  group_by(`Country Name`) %>%
+  slice_sample(n = 100) %>%
+  visdat::vis_miss()
+```
+- only a subsample of data here
+- but there are a lot of irrelevant indicators
+- and serious coverage only starts after WWII
+
+**Note that the IMF definition of advanced differs from the WESP definition!**
+```{r}
+df_wesp <- readxl::read_excel("../../data/raw/Regions.xlsx")
 ```
 
 ```{r}
-df_imf %>%
-  filter(
-    `Country Name`== "Canada"
-  ) 
+df_wesp %>%
+  filter(Development_status == "DVD") %>%
+  select(`Short country name`) %>%
 ```
+the WESP has only 37 advanced economies! (with IMF at 42)
 
+Therefore to split the files, we need a IMF helper function (to do in `./src/utils`)
