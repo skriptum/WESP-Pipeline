@@ -4,8 +4,9 @@
 library(tidyverse)
 library(rsdmx)
 ```
+
 ```{r}
-imf_CONV <- readxl::read_excel("../../data/00_raw/imf_CONV.xlsx") 
+imf_CONV <- readxl::read_excel("../../data/raw/imf_CONV.xlsx") 
 ```
 
 
@@ -13,22 +14,29 @@ imf_CONV <- readxl::read_excel("../../data/00_raw/imf_CONV.xlsx")
 ## Exchange Rates
 
 - WESP Code: *_rfx_ncdol
-- Description: Exchange rates, domestic currency per usd, period average, rate
-
+- WESP Desc: Exchange rates, domestic currency per usd, period average, rate
 - IMF Database: [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER)
-- Indicator: XDC_USD
+- IMF Code: XDC_USD; PA_RT
 
 ```{r}
 flowref <- 'ER'
-key <- "*.XDC_USD.PA_RT.M"
+
+COUNTRIES <- "*" # All countries
+INDICATOR <- "XDC_USD" # selected Indicator
+TRANSFORMATION <- "PA_RT" # Period Average, Rate
+FREQUENCY <- "M" # Monthly
+
+key <- paste0(COUNTRIES, ".", INDICATOR, ".", TRANSFORMATION, ".", FREQUENCY)
+key
 ```
 
 ```{r}
-dataset_ER <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key,
-                                  ))
+dataset_ER <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key,
+))
 ```
 
 ```{r}
@@ -48,34 +56,39 @@ df_ER <- dataset_ER %>%
   pivot_wider(
     names_from = TIME_PERIOD,
     values_from = OBS_VALUE
-  ) 
+  ) %>%
+  select(-`NA`)
+```
 
-head(df_ER)
-```
+Take a look at the data or play around with it
 ```{r}
-visdat::vis_miss(df_ER)
+# head(df_ER)
 ```
-Missing: explained by unused rows that are aggregates etc.
 
 ## Interest Rates
 
-- Wesp Code: *_rird
-- Desc: Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum
-
+- WESP Code: *_rird
+- WESP Desc: Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum
 - IMF Database: [Monetary and Financial Statistics: Interest Rates](https://data.imf.org/en/datasets/IMF.STA:MFS_IR)
-- Indicator: MFS_166_RT_PT_A_PT
+- IMF Code: MFS_166_RT_PT_A_PT
 
 ```{r}
 flowref <- 'MFS_IR'
-key <- "*.MFS166_RT_PT_A_PT.M"
+
+COUNTRIES <- "*" # All countries
+INDICATOR <- "MFS166_RT_PT_A_PT" # selected Indicator
+FREQUENCY <- "M" # Monthly
+
+key <- paste0(COUNTRIES, ".", INDICATOR, ".", FREQUENCY)
 ```
 
 ```{r}
-dataset_IR <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key,
-                                  ))
+dataset_IR <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key,
+))
 ```
 
 ```{r}
@@ -98,29 +111,67 @@ df_IR <- dataset_IR %>%
   pivot_wider(
     names_from = TIME_PERIOD,
     values_from = OBS_VALUE
-  ) 
+  ) %>%
+  select(-`NA`)
+```
 
+Take a look at the data or play around with it
+```{r}
 df_IR
 ```
 
-```{r}
-visdat::vis_miss(df_IR)
-```
-
-```{r}
-df_IR %>%
-  filter(`Country Name` == "Germany")
-```
-
-
-
-## Combining Data
+## Combining + Saving
 
 ```{r}
 df_imf_monthly <- bind_rows(df_ER, df_IR)
 ```
 
-```{r}
-writexl::write_xlsx(df_imf_monthly, "../../data/01_IMF_processed/imf_monthly.xlsx")
+```{r, warning=false}
+source("../../src/utils/imf_split.R")
+
+split_dfs <- split_imf_data(df_imf_monthly)
 ```
+
+```{r}
+source("../../src/utils/save_timestamp.R")
+
+# separately save each group with timestamp
+
+timestamp_save(
+  df = split_dfs$adv,
+  filename = "adv_monthly.xlsx",
+  source = "IMF",
+  frequency = "monthly"
+)
+
+timestamp_save(
+  df = split_dfs$developing,
+  filename = "developing_monthly.xlsx",
+  source = "IMF",
+  frequency = "monthly"
+)
+
+timestamp_save(
+  df = split_dfs$other,
+  filename = "others_monthly.xlsx",
+  source = "IMF",
+  frequency = "monthly"
+)
+
+# also save the combined file
+
+timestamp_save(
+  df = df_imf_monthly,
+  filename = "all_monthly.xlsx",
+  source = "IMF",
+  frequency = "monthly"
+)
+```
+
+
+```{r}
+split_dfs$adv
+```
+
+
 
