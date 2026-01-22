@@ -15,7 +15,7 @@ timestamp_save <- function (df, filename, source, frequency) {
   # (try to) save
   tryCatch({ # Try to save the file
       write_xlsx(
-        x = list("Indicators" = df), 
+        x = list(filename = df), 
         path = paste0("../../data/imf_processed/",filename),
         format_headers=F 
       )

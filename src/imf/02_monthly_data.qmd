@@ -13,7 +13,7 @@ imf_CONV <- readxl::read_excel("../../data/raw/imf_CONV.xlsx")
 
 ## Exchange Rates
 
-- WESP Code: *_rfx_ncdol
+- WESP Code: *_rfx_ncdol / ENDA_XDC_USD_RATE
 - WESP Desc: Exchange rates, domestic currency per usd, period average, rate
 - IMF Database: [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER)
 - IMF Code: XDC_USD; PA_RT
@@ -48,9 +48,10 @@ df_ER <- dataset_ER %>%
     `Country Name` = Name,
     `Country Code` = Code,
     `Indicator Name` = "Exchange rates, domestic currency per usd, period average, rate",
-    `Indicator Code` = "XDC_USD",
+    `Indicator Code` = "ENDA_XDC_USD_RATE",
     `Attribute` = "Value",
     TIME_PERIOD = gsub("-", "", TIME_PERIOD),
+    TIME_PERIOD = gsub("M0", "M", TIME_PERIOD),
     OBS_VALUE
   ) %>%
   pivot_wider(
@@ -67,7 +68,7 @@ Take a look at the data or play around with it
 
 ## Interest Rates
 
-- WESP Code: *_rird
+- WESP Code: *_rird / FPOLM_PA
 - WESP Desc: Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum
 - IMF Database: [Monetary and Financial Statistics: Interest Rates](https://data.imf.org/en/datasets/IMF.STA:MFS_IR)
 - IMF Code: MFS_166_RT_PT_A_PT
@@ -103,7 +104,7 @@ df_IR <- dataset_IR %>%
     `Country Name` = Name,
     `Country Code` = Code,
     `Indicator Name` = "Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum",
-    `Indicator Code` = "MFS_166_RT_PT_A_PT",
+    `Indicator Code` = "FPOLM_PA", 
     `Attribute` = "Value",
     TIME_PERIOD = gsub("-", "", TIME_PERIOD),
     OBS_VALUE
@@ -126,7 +127,7 @@ df_IR
 df_imf_monthly <- bind_rows(df_ER, df_IR)
 ```
 
-```{r, warning=false}
+```{r}
 source("../../src/utils/imf_split.R")
 
 split_dfs <- split_imf_data(df_imf_monthly)
@@ -169,9 +170,6 @@ timestamp_save(
 ```
 
 
-```{r}
-split_dfs$adv
-```
 
 
 

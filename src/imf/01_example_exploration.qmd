@@ -46,6 +46,13 @@ df_imf %>%
 - but there are a lot of irrelevant indicators
 - and serious coverage only starts after WWII
 
+
+```{r}
+df_selection <- df_imf %>%
+  select(`Country Name`, `Indicator Name`, `Indicator Code`, `1990`, `2000`, `2010`, `2020`)
+```
+
+
 **Note that the IMF definition of advanced differs from the WESP definition!**
 ```{r}
 df_wesp <- readxl::read_excel("../../data/raw/Regions.xlsx")
