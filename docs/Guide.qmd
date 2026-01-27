@@ -1,0 +1,350 @@
+---
+title: "How to API in R"
+subtitle: "27/01/26"
+execute:
+  echo: true
+  warning: false
+format: 
+  clean-revealjs:
+    slide-number: true
+    center: true
+    #smaller: true
+    self-contained: true
+#    theme: serif
+df-print: paged
+---
+
+# General
+
+## Preamble
+
+- I cant answer everything, most of it is learning by doing
+- Most of the APIs are not really user-friendly documented
+- Hopefully it will not take 2 hours
+
+## What is an API?
+
+API = Application Programming Interface
+
+- programmatic way to retrieve data from online servers
+- can be anything (uploading, downloading, instructing)
+- different API types: REST, SDMX, JSON, ... (*think dialects*)
+
+Goal: Format Request in specific way to get specific data from the server
+
+![](api_simplified.png)
+
+
+
+## What is SDMX?
+
+![](./sdmx.png)
+
+an API for statistical agencies
+
+- BIS, ECB, EUROSTAT, IMF, OECD, World Bank, UN (?), ILO, many NSOs...
+- used in many different contexts (e.g NSO pushes to IO etc)
+- lengthy 145 page User Guide [Link](https://sdmx.org/wp-content/uploads/SDMX_2-1_User_Guide_draft_0-1.pdf)
+- only very small / relevant subset covered here (GET DATA)
+
+
+
+## How does the SDMX API work?
+
+each call must have identifiers for:
+
+- Statistical Agency (*Provider*)
+
+- Database (*Dataflow*)
+
+- Columns / Groupings (*Dimensions*), e.g.
+  - selected Countries
+  - Indicator you want
+  - Time Period
+  - **Dimensions differ for each dataset!**
+
+A Basic call: chain all of these together to get the wanted dataset
+
+*very abstract, so lets see some*
+
+# Examples
+
+## IMF
+
+### On the Website
+
+Goal: CPI data since 1960 for USA, United Kingdom, and Germany
+
+1. [data.imf.org](https://data.imf.org/en)
+2. [CPI Dataset](https://data.imf.org/en/datasets/IMF.STA:CPI)
+3. [Data Explorer](https://data.imf.org/en/Data-Explorer?datasetUrn=IMF.STA:CPI(5.0.0))
+
+---
+
+![](./imf1.png)
+
+---
+
+- In the Filter Tab, select categories for all dimensions (one or multiple)
+- then click on Listing Icon and switch to Id
+- take note of the IDs you want
+- THE ORDER IS IMPORTANT!
+
+| Dimension              | Name                                     | ID            |
+| ---------------------- | ---------------------------------------- | ------------- |
+| Country                | United Stations, United Kingdom, Germany | USA, GBR, DEU |
+| Index Type             | Consumer Price Index                     | CPI           |
+| Expenditure            | All Items                                | _T            |
+| Type of Transformation | Period average, Y-O-Y percentage change  | YOY_PCH_PA_PT |
+| Frequency              | Annual                                   | A             |
+
+---
+
+### In the Code
+
+First, lets import the relevant libraries:
+
+```{r}
+#| output: false
+library(tidyverse)
+library(rsdmx)
+```
+
+---
+
+Then we define our key by pasting together the selected IDs for each dimension
+
+```{r}
+COUNTRIES <- "USA+GBR+DEU" # All countries
+INDICATOR <- "CPI" # selected Indicator
+EXPENDITURE <- "_T" # All items / Total
+TRANSFORMATION <- "YOY_PCH_PA_PT" # Percentage change
+FREQUENCY <- "A" # Annual
+
+key <- paste0(COUNTRIES, ".", INDICATOR,".", EXPENDITURE, ".", TRANSFORMATION, ".", FREQUENCY)
+
+key
+```
+
+---
+
+Now, we call the API, specifying our provider, database, key, and time period
+
+```{r}
+raw_data <- readSDMX(
+  providerId = "IMF_DATA",  # IMF as Provider
+  resource = "data",        # we want data
+  flowRef = "CPI",          # from the CPI database
+  key = key,                # our carefully created key
+  start = 1960,             # lets limit it to start in 1960
+  )
+```
+
+---
+
+The response is in SDMX format, so we have to convert it to a data frame first
+
+```{r}
+#| output: html
+df <- as.data.frame(raw_data)
+
+head(df)
+```
+
+---
+
+Lets make a quick plot 
+
+```{r}
+df %>%
+  select(COUNTRY, TIME_PERIOD, OBS_VALUE) %>%   # select relevant columns
+  mutate(                                       # change types of columns
+    OBS_VALUE = as.numeric(OBS_VALUE),
+    TIME_PERIOD = as.numeric(TIME_PERIOD)
+    ) %>%  
+  ggplot(aes(x=TIME_PERIOD, y=OBS_VALUE, color=COUNTRY)) +     # basic ggplot call
+    geom_line() +                               # present as line plot
+    labs(title="CPI since 1960")                # add title
+```
+
+---
+
+## OECD
+
+Goal: Official Development Assistance (ODA) 
+
+1. [data-explorer.oecd.org/](https://data-explorer.oecd.org/)
+2. [DAC Table 1](https://data-explorer.oecd.org/vis?fs[0]=Topic%2C1%7CDevelopment%23DEV%23%7COfficial%20Development%20Assistance%20%28ODA%29%23DEV_ODA%23&pg=0&fc=Topic&bp=true&snb=20&vw=tb&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_DAC1%40DF_DAC1&df[ag]=OECD.DCD.FSD&df[vs]=1.6&dq=DAC._Z.1010..1160.USD.Q&lom=LASTNPERIODS&lo=10&to[TIME_PERIOD]=false)
+
+
+---
+
+### On the Website
+
+![](./oecd1.png)
+
+---
+
+![](./oecd2.png)
+
+---
+
+### In my Code
+
+```{r}
+url <- "https://sdmx.oecd.org/public/rest/data/OECD.DCD.FSD,DSD_DAC1@DF_DAC1,1.6/DAC._Z.1010..1160.USD.Q?startPeriod=2015&dimensionAtObservation=AllDimensions"
+```
+
+Much easier...
+
+```{r}
+raw_data_oecd <- readSDMX(url)
+df_oecd <- as.data.frame(raw_data_oecd)
+```
+
+---
+
+Again, a quick plot
+
+```{r}
+df_oecd %>%
+  mutate(
+    obsValue = as.numeric(obsValue),
+    TIME_PERIOD = as.numeric(TIME_PERIOD)
+  ) %>%
+  ggplot(aes(x=TIME_PERIOD, y=obsValue)) +
+  geom_line() +
+  labs(title="Total ODA since 2018")
+```
+
+
+# Exercise
+
+## Prerequisites 
+
+The RSDMX Package
+
+```{r}
+#| eval: false
+install.packages("rsdmx")
+```
+
+## Your Task
+
+Unemployment Rate for Spain and Italy since 2012
+
+- both ways possible
+- different tradeoffs:
+  - IMF = much easier to search, but more difficult to access
+  - OECD = vice versa
+  
+Links:  
+
+- [data.imf.org](https://data.imf.org/en)
+- [data-explorer.oecd.org](https://data-explorer.oecd.org/)
+
+## The Solution: IMF
+
+![](example_imf.png)
+
+---
+
+```{r}
+COUNTRIES <- "ESP+ITA" # Spain and Italy
+INDICATOR <- "LUR" # Unemployment Rate
+FREQUENCY <- "A" # Annual
+
+key <- paste0(COUNTRIES, ".", INDICATOR,".", FREQUENCY)
+```
+
+```{r}
+raw_data_unemp <- readSDMX(
+  providerId = "IMF_DATA",  
+  resource = "data",        
+  flowRef = "WEO", # World Economic Outlook          
+  key = key,                
+  start = 2012,             
+  )
+```
+---
+
+```{r}
+df_unemp <- as.data.frame(raw_data_unemp)
+df_unemp %>%
+  select(COUNTRY, TIME_PERIOD, OBS_VALUE) %>%
+  pivot_wider(names_from=COUNTRY, values_from=OBS_VALUE) 
+```
+
+
+## The Solution: Eurostat
+
+Search for "Unemployment Rate" on [data-explorer.oecd.org](data-explorer.oecd.org)
+
+Misleading: namend "monthly Unemployment Rate", but has annual frequency as well
+
+This Table has everything we need: [Link](https://data-explorer.oecd.org/vis?fs[0]=Frequency%20of%20observation%2C0%7CAnnual%23A%23&pg=0&fc=Frequency%20of%20observation&snb=29&tm=unemployment%20rate%20annual&vw=tb&df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_LFS%40DF_IALFS_UNE_M&df[ag]=OECD.SDD.TPS&df[vs]=1.0&dq=ESP%2BITA..._Z.Y._T.Y_GE15..A&lom=LASTNPERIODS&lo=13&to[TIME_PERIOD]=false)
+
+![](example_oecd.png)
+
+---
+
+
+```{r}
+url <- "https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_LFS@DF_IALFS_UNE_M,1.0/ESP+ITA..._Z.Y._T.Y_GE15..A?startPeriod=2012&dimensionAtObservation=AllDimensions"
+```
+
+```{r}
+raw_data_eurostat <- readSDMX(url)
+df_eurostat <- as.data.frame(raw_data_eurostat)
+```
+
+---
+
+```{r}
+df_eurostat %>%
+  select(REF_AREA, TIME_PERIOD, obsValue) %>%
+  pivot_wider(names_from=REF_AREA, values_from=obsValue)
+```
+
+
+## Helpful Tips
+
+### Github Copilot
+
+Coding Assistant 
+
+- with [free tier](https://github.com/features/copilot)
+- directly integrated in RStudio, completes your code on TAB
+
+Note: 
+
+- not well trained on (SDMX) API calls, so you probably have to build it yourself
+- tidyverse = works really good (although sometimes quite inefficient)
+
+---
+
+### Quarto Markdown
+
+New format in [RStudio](https://quarto.org/)
+
+- combines Prose and Code
+- very good for documenting code and pasting links etc
+- allows to produce PDFs, HTML, slides, ...
+
+---
+
+### Tidyverse Cheat Sheets
+
+All packages in the tidyverse in R have very good cheat sheets!
+
+- **dplyr** (for transforming data): [PDF](https://rstudio.github.io/cheatsheets/data-transformation.pdf)
+- **ggplot** (data visualisation): [PDF](https://rstudio.github.io/cheatsheets/data-visualization.pdf)
+- **tidyr** (for cleaning data): [PDF](https://rstudio.github.io/cheatsheets/tidyr.pdf)
+
+---
+
+### Links
+
+- [SDMX.org](https://sdmx.org)
+- [imfapi](https://teal-insights.github.io/r-imfapi/) package for R (quite new, but should work)
+

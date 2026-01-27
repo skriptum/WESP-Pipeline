@@ -1,6 +1,9 @@
 filename,source,frequency,last_run,code_version,status
-imf_monthly_combined.xlsx,IMF,monthly,2026-01-21_15-13-06,502dd2d,Success
-adv_monthly.xlsx,IMF,monthly,2026-01-21_15-15-06,502dd2d,Success
-developing_monthly.xlsx,IMF,monthly,2026-01-21_15-15-06,502dd2d,Success
-others_monthly.xlsx,IMF,monthly,2026-01-21_15-15-07,502dd2d,Success
-all_monthly.xlsx,IMF,monthly,2026-01-21_15-15-07,502dd2d,Success
+adv_monthly.xlsx,IMF,monthly,2026-01-21_16-05-53,69a6e29,Success
+developing_monthly.xlsx,IMF,monthly,2026-01-21_16-05-53,69a6e29,Success
+others_monthly.xlsx,IMF,monthly,2026-01-21_16-05-53,69a6e29,Success
+all_monthly.xlsx,IMF,monthly,2026-01-21_16-05-53,69a6e29,Success
+adv_annual.xlsx,IMF,Annual,2026-01-21_17-19-46,69a6e29,Success
+developing_annual.xlsx,IMF,Annual,2026-01-21_17-19-47,69a6e29,Success
+others_annual.xlsx,IMF,Annual,2026-01-21_17-19-47,69a6e29,Success
+all_annual.xlsx,IMF,Annual,2026-01-21_17-19-47,69a6e29,Success
