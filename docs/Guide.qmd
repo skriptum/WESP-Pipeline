@@ -21,6 +21,7 @@ df-print: paged
 - I cant answer everything, most of it is learning by doing
 - Most of the APIs are not really user-friendly documented
 - Hopefully it will not take 2 hours
+- wdadwd
 
 ## What is an API?
 
@@ -112,7 +113,7 @@ library(rsdmx)
 
 ---
 
-Then we define our key by pasting together the selected IDs for each dimension
+define our key by pasting together the selected IDs for each dimension
 
 ```{r}
 COUNTRIES <- "USA+GBR+DEU" # All countries
@@ -167,8 +168,6 @@ df %>%
     labs(title="CPI since 1960")                # add title
 ```
 
----
-
 ## OECD
 
 Goal: Official Development Assistance (ODA) 
@@ -191,20 +190,27 @@ Goal: Official Development Assistance (ODA)
 
 ### In my Code
 
+
 ```{r}
 url <- "https://sdmx.oecd.org/public/rest/data/OECD.DCD.FSD,DSD_DAC1@DF_DAC1,1.6/DAC._Z.1010..1160.USD.Q?startPeriod=2015&dimensionAtObservation=AllDimensions"
 ```
 
-Much easier...
+now get the data and convert it to a data frame
 
 ```{r}
 raw_data_oecd <- readSDMX(url)
 df_oecd <- as.data.frame(raw_data_oecd)
 ```
+---
+
+```{r}
+head(df_oecd)
+```
+
 
 ---
 
-Again, a quick plot
+a quick plot
 
 ```{r}
 df_oecd %>%
@@ -216,6 +222,9 @@ df_oecd %>%
   geom_line() +
   labs(title="Total ODA since 2018")
 ```
+
+
+
 
 
 # Exercise
@@ -307,9 +316,9 @@ df_eurostat %>%
 ```
 
 
-## Helpful Tips
+# Helpful Tips
 
-### Github Copilot
+## Github Copilot
 
 Coding Assistant 
 
@@ -323,7 +332,7 @@ Note:
 
 ---
 
-### Quarto Markdown
+## Quarto Markdown
 
 New format in [RStudio](https://quarto.org/)
 
@@ -333,7 +342,7 @@ New format in [RStudio](https://quarto.org/)
 
 ---
 
-### Tidyverse Cheat Sheets
+## Tidyverse Cheat Sheets
 
 All packages in the tidyverse in R have very good cheat sheets!
 
@@ -343,8 +352,76 @@ All packages in the tidyverse in R have very good cheat sheets!
 
 ---
 
-### Links
+## Links
 
-- [SDMX.org](https://sdmx.org)
+- [A gentle introduction to SDMX for reproducible data extraction from international organizations](https://rogermariolopez.com/en/post/25-12-sdmx/#data-structure-the-dimensions)
 - [imfapi](https://teal-insights.github.io/r-imfapi/) package for R (quite new, but should work)
+- [IMF SDMX central](https://sdmxcentral.imf.org/data/overview.html)
+  - verz convoluted overview of IMF datasets, but able to see dimensions
+- [Eurostat Query Builder](https://ec.europa.eu/eurostat/web/query-builder/tool)
+- [ILO query builder](https://ilostat.ilo.org/resources/sdmx-tools/)
 
+## additional code
+
+### list of all providers 
+
+```{r}
+providers <- getSDMXServiceProviders()
+as.data.frame(providers)
+```
+
+---
+
+### add labels to data frame
+
+```{r}
+COUNTRIES <- "*" # All countries
+INDICATOR <- "CPI" # selected Indicator
+EXPENDITURE <- "_T" # All items / Total
+TRANSFORMATION <- "YOY_PCH_PA_PT" # Percentage change
+FREQUENCY <- "A" # Annual
+key <- paste0(COUNTRIES, ".", INDICATOR,".", EXPENDITURE, ".", TRANSFORMATION, ".", FREQUENCY)
+```
+
+```{r}
+#| freeze: true
+raw_data <- readSDMX(
+  providerId = "IMF_DATA",  # IMF as Provider
+  resource = "data",        # we want data
+  flowRef = "CPI",          # from the CPI database
+  key = key,                # our carefully created key
+  start = 1960,             # lets limit it to start in 1960
+  dsd = TRUE
+  )
+```
+
+---
+
+```{r}
+df <- as.data.frame(raw_data, label=T)
+head(df)
+```
+
+---
+
+### download complete tables
+
+you can also download complete tables without specifying keys (Beware, it takes a lot of time!)
+
+```{r}
+#| freeze: true
+imf_raw <- readSDMX(
+  providerId = "IMF_DATA",  
+  resource = "data",        
+  flowRef = "WEO",          
+  start = 2023, 
+  end = 2025
+  )
+```
+
+---
+
+```{r}
+df_huge <- as.data.frame(imf_raw)
+head(df_huge)
+```
