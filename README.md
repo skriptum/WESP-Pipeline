@@ -46,7 +46,7 @@ R <--calls--> a --timestamp--> 4[last_successful_run.csv]
 3. add the relevant country codes for WEFM from `imf_CONV.xlsx`
 4. split it into the country groupings using the utility script `imf_split.qmd`
 5. save the excel files into the `data/imf_processed` folder
-6. update the timestamp for last accessed in the `LOG.csv` 
+6. update the timestamp for last accessed in the `last_successful_run.csv` 
 
 
 
@@ -67,7 +67,7 @@ install.packages("renv") # install renv if you don't have it yet renv::restore()
    ```
    - *In the long run, this could be automated using a Makefile or similar, but for now, this is sufficient.*
 
-3. Check in the `LOG.csv` file to see when the last run was for each data source.
+3. Check in the `last_successful_run.csv` file to see when the last run was for each data source.
 
 *Feel free to go into each Quarto Code file and look at it before running it, there are a some more comments in there too to explain how it works*
 
@@ -129,9 +129,9 @@ Annual Data
 
 ## TODO
 
-- [ ] Log Tracker Script
-- [ ] Regions Utils Script
+- [x] Log Tracker Script
+- [x] Regions Utils Script
 - [ ] Runner Script
-- [ ] Key Creation Transparency
+- [x] Key Creation Transparency
 - [x] Workflow explanation
-- [ ] Slides for the Workshop
+- [x] Slides for the Workshop
