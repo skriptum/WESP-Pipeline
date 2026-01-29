@@ -1,3 +1,6 @@
 .DS_Store
 .Rproj.user
 examples/
+
+docs/_extensions/
+docs/Guide_files/

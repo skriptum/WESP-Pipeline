@@ -4,13 +4,12 @@ subtitle: "27/01/26"
 execute:
   echo: true
   warning: false
-format: 
+format:
   clean-revealjs:
     slide-number: true
     center: true
     #smaller: true
-    self-contained: true
-#    theme: serif
+    #self-contained: true
 df-print: paged
 ---
 
@@ -21,7 +20,6 @@ df-print: paged
 - I cant answer everything, most of it is learning by doing
 - Most of the APIs are not really user-friendly documented
 - Hopefully it will not take 2 hours
-- wdadwd
 
 ## What is an API?
 
@@ -384,7 +382,7 @@ key <- paste0(COUNTRIES, ".", INDICATOR,".", EXPENDITURE, ".", TRANSFORMATION, "
 ```
 
 ```{r}
-#| freeze: true
+#| freeze: false
 raw_data <- readSDMX(
   providerId = "IMF_DATA",  # IMF as Provider
   resource = "data",        # we want data
@@ -409,7 +407,7 @@ head(df)
 you can also download complete tables without specifying keys (Beware, it takes a lot of time!)
 
 ```{r}
-#| freeze: true
+#| freeze: false
 imf_raw <- readSDMX(
   providerId = "IMF_DATA",  
   resource = "data",        

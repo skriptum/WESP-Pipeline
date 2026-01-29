@@ -1,0 +1,14 @@
+# Comparing the Datasets
+
+Monthly Analysis
+
+```{r}
+library(tidyverse)
+library(visdat)
+```
+
+```{r}
+df_old <- read_csv("../../examples/imf/adv_monthly.csv")
+df_new <- readxl::read_excel("../../data/imf_processed/adv_monthly.xlsx")
+```
+
