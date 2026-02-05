@@ -58,7 +58,7 @@ This chunk calls the IMF SDMX API and loads the data into a dataframe (all the r
 dataset_ER <- as.data.frame(readSDMX(
   providerId = 'IMF_DATA',
   resource = 'data',
-  lowRef = flowref,
+  flowRef = flowref,
   key = key,
 ))
 ```
