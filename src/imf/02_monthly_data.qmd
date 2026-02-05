@@ -157,7 +157,7 @@ timestamp_save(
 
 timestamp_save(
   df = split_dfs$other,
-  filename = "others_monthly",
+  filename = "other_monthly",
   source = "IMF",
   format = "csv",
   frequency = "monthly"

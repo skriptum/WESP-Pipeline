@@ -1,13 +1,32 @@
 # IMF: Annual Data
 
+This Code file downloads annual data from the IMF data portal. The indicators included are those referred to in the WEFM model (hopefully). 
+
+Every Variable describes first the old Code, the old Description, the IMF Database and the IMF Code. 
+To check the data, go to the linked IMF Database, paste the IMF code (and supporting descriptors) in the dashboard. 
+
+Eg for CPI: 
+
+- go to the IMF [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER) Database and click on "View Data"
+- in the Indicator tab, click the list icon and change to Id, then search for the "XDC_USD" code
+- in the Type of Transformation tab, click the list icon and change to Id, then search for the "PA_RT" code
+- select the Annual Frequency, then click "Apply"
+
+This should load the same data as the code below. If there are discrepancies between the output file and online, check in the `last_successful_run.csv` file, to see when was the last time the code was run. 
+
+This code file is structured so that every indicator is downloaded and processed in a separate section and separate chunks, so you can easily check each dataframe produced for each indicator. In the end they are all combined and saved (split as their country groupings, like in the original IMF raw files).
+
+## Loading Libraries
 
 ```{r}
 library(tidyverse)
 library(rsdmx)
 ```
 
+This is a magic conversion file, needed because the WEFM only accepts country codes no one uses anymore. So we have to translate the standard ISO codes from IMF using this.
+
 ```{r}
-imf_CONV <- readxl::read_excel("../../data/imf_CONV.xlsx") 
+imf_CONV <- readxl::read_excel("../../data/raw/imf_CONV.xlsx") 
 
 imf_CONV <- imf_CONV %>%
   # filter for non-country codes (eg longer than 3)
@@ -16,24 +35,35 @@ imf_CONV <- imf_CONV %>%
 
 ## Exchange Rates
 
-- WESP Code: *_rfx_ncdol
+- WESP Code: ENDA_XDC_USD_RATE / *_rfx_ncdol (output from some WEFM code from Andrea)
 - WESP Desc: Exchange rates, domestic currency per usd, period average, rate
 - IMF Database: [Exchange Rates](https://data.imf.org/en/datasets/IMF.STA:ER)
-- IMF Code: XDC_USD
+- IMF Code: XDC_USD; PA_RT (the semicolon separates the indicator code from the transformation code, which is important to get the right data)
 
+To get the specific code, we need to create our SDMX API Key. For transparency, I have separated each Dimension of the database below, but you can also just write it all in one string.
 ```{r}
 flowref <- 'ER'
-key <- "*.XDC_USD.PA_RT.A"
+
+COUNTRIES <- "*"
+INDICATOR <- "XDC_USD"
+TRANSFORMATION <- "PA_RT"
+FREQUENCY <- "A"
+
+key <- paste0(COUNTRIES, ".", INDICATOR, ".", TRANSFORMATION, ".", FREQUENCY)
+key
 ```
 
+This chunk calls the IMF SDMX API and loads the data into a dataframe (all the raw responses are called `dataset_XX`, while the cleaned ones are called `df_XX`). 
 ```{r}
-dataset_ER <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key,
-                                  ))
+dataset_ER <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  lowRef = flowref,
+  key = key,
+))
 ```
 
+To recreate the IMF files, we have to clean a bit, rename and pivot, though nothing special happening here.
 ```{r}
 df_ER <- dataset_ER %>%
   filter(TIME_PERIOD >= 1920) %>%
@@ -43,7 +73,7 @@ df_ER <- dataset_ER %>%
     `Country Name` = Name,
     `Country Code` = Code,
     `Indicator Name` = "Exchange rates, domestic currency per usd, period average, rate",
-    `Indicator Code` = "XDC_USD",
+    `Indicator Code` = "ENDA_XDC_USD_RATE",
     `Attribute` = "Value",
     TIME_PERIOD = gsub("-", "", TIME_PERIOD),
     OBS_VALUE = as.numeric(OBS_VALUE)
@@ -51,21 +81,21 @@ df_ER <- dataset_ER %>%
   pivot_wider(
     names_from = TIME_PERIOD,
     values_from = OBS_VALUE
-  ) 
-  
+  )
+```
 
+Lets check the output: 
+```{r}
 head(df_ER)
 ```
 
-```{r}
-visdat::vis_dat(df_ER)
-```
+Looks right, now we can move on to the next indicator, and repeat the same process (this time with less explanation)
 
 ## CPI
 
 - WESP Code: 
-  - *PCPI, 
-  - *PCPI_GR
+  - PCPI_IX, *PCPI, 
+  - PCPI_PC_CP_A_PT, *PCPI_GR
 - WESP Desc:
   - Prices, Consumer Price Index, All items, Index
   - Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent
@@ -77,16 +107,24 @@ visdat::vis_dat(df_ER)
 
 ```{r}
 flowref <- 'CPI'
-key_CPI <- "*.CPI._T.IX+YOY_PCH_PA_PT.A"
+
+COUNTRIES <- "*"
+INDICATOR <- "CPI"
+SECTOR <- "_T"
+TRANSFORMATION <- "IX+YOY_PCH_PA_PT"
+FREQUENCY <- "A"
+
+key_CPI <- paste(COUNTRIES, INDICATOR, SECTOR, TRANSFORMATION, FREQUENCY, sep = ".")
 ```
 
 ```{r}
-dataset_CPI <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key_CPI,
-                                  start=1960
-                                  ))
+dataset_CPI <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key_CPI,
+  start=1960
+))
 ```
 
 
@@ -102,8 +140,8 @@ df_CPI <- dataset_CPI %>%
        TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent"
      ),
      `Indicator Code` = case_when(
-       TYPE_OF_TRANSFORMATION == "IX" ~ "PCPI",
-       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "PCPI_GR"
+       TYPE_OF_TRANSFORMATION == "IX" ~ "PCPI_IX",
+       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "PCPI_PC_CP_A_PT"
      ),
      Attribute = "Value",
      OBS_VALUE = as.numeric(OBS_VALUE),
@@ -117,26 +155,11 @@ df_CPI <- dataset_CPI %>%
 df_CPI
 ```
 
-Missing values visualization for CPI %
-```{r}
-df_CPI %>%
-  filter(`Indicator Code` == "PCPI_GR") %>%
-  visdat::vis_dat() +
-  labs(title = "CPI % Missing Values Visualization")
-```
 
-
-Missing values visualization for CPI Index
-```{r}
-df_CPI %>%
-  filter(`Indicator Code` == "PCPI") %>%
-  visdat::vis_dat() + 
-  labs(title = "CPI Index Missing Values Visualization")
-```
 
 ## Current Account
 
-- WESP Code: *BCANET$
+- WESP Code: *BCANET$ / BCAXF_BP6_USD
 - WESP Desc: Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars
 
 - IMF Database: [WEO](https://data.imf.org/en/datasets/IMF.RES:WEO)
@@ -148,13 +171,14 @@ key <- "*.BCA.A"
 ```
 
 ```{r}
-dataset_CA <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key,
-                                  start=1960,
-                                  end = year(Sys.Date())
-                                  ))
+dataset_CA <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key,
+  start=1960,
+  end = year(Sys.Date()) # there are projections, we dont need them
+))
 ```
 
 ```{r}
@@ -165,7 +189,7 @@ df_CA <- dataset_CA %>%
     `Country Name` = Name,
     `Country Code` = Code,
     `Indicator Name` = "Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars",
-    `Indicator Code` = "BCANET$",
+    `Indicator Code` = "BCAXF_BP6_USD",
     `Attribute` = "Value",
     OBS_VALUE = as.numeric(OBS_VALUE),
     TIME_PERIOD
@@ -177,14 +201,10 @@ df_CA <- dataset_CA %>%
   select(-`NA`) 
 ```
 
-```{r}
-visdat::vis_dat(df_CA) + 
-  labs(title = "Current Account Missing Values Visualization")
-```
 
 ## Money Supply M2
 
-- WESP Code: *BMS_M2$
+- WESP Code: FMB_XDC / *BMS_M2$
 - WESP Desc: Monetary, M2, Domestic Currency
 - IMF Database: [Monetary and Financial Statistics: Monetary Aggregates](https://data.imf.org/en/datasets/IMF.STA:MFS_MA)
 - IMF Code: BM_MAI; XDC
@@ -194,16 +214,24 @@ NOTE: Check that broad money = M2 in the definitions
 
 ```{r}
 flowref <- 'MFS_MA'
-key <- "*.BM_MAI.XDC.A"
+
+COUNTRIES <- "*"
+INDICATOR <- "BM_MAI"
+CURRENCY <- "XDC"
+FREQUENCY <- "A"
+
+key <- paste(COUNTRIES, INDICATOR, CURRENCY, FREQUENCY, sep=".")
 ```
 
 ```{r}
-dataset_M2 <- as.data.frame(readSDMX(providerId = 'IMF_DATA',
-                                  resource = 'data',
-                                  flowRef = flowref,
-                                  key = key,
-                                  start=1960
-                                  ))
+dataset_M2 <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key,
+  start=1960,
+  end= year(Sys.Date())
+))
 ```
 
 ```{r}
@@ -214,7 +242,7 @@ df_M2 <- dataset_M2 %>%
     `Country Name` = Name,
     `Country Code` = Code,
     `Indicator Name` = "Money and Quasi Money, Broad Money (M2), US Dollars",
-    `Indicator Code` = "BMS_M2$",
+    `Indicator Code` = "FMB_XDC",
     `Attribute` = "Value",
     OBS_VALUE = as.numeric(OBS_VALUE),
     TIME_PERIOD
@@ -226,9 +254,126 @@ df_M2 <- dataset_M2 %>%
   select(-`NA`)
 ```
 
+
+## Interest Expenses
+
+- WESP Code
+  - GG_GEI_G01_XDC
+  - BCG_GEI_G01_XDC
+- WESP Desc:
+  - Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency
+  - Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency
+- IMF Database: [Quarterly Governemtn Finance Statistics](https://data.imf.org/en/datasets/IMF.STA:QGFS)
+- IMF Code:  
+  - G24_T_XDC; S13
+  - G24_T_XDC; S1311B
+- IMF Desc:
+  - Interest payable, Transactions; General Government
+  - Interest payable, Transactions; Budgetary Central Government
+  
 ```{r}
-visdat::vis_dat(df_M2) + 
-  labs(title = "Money Supply M2 Missing Values Visualization")
+flowref <- 'QGFS'
+
+COUNTRIES <- "*"
+ACCOUNT <- "SOO"
+SECTOR <- "S13+S1311B"
+INDICATOR <- "G24_T_XDC"
+FREQUENCY <- "A"
+
+key <- paste(COUNTRIES, ACCOUNT, SECTOR, INDICATOR, FREQUENCY, sep = ".")
+key
 ```
 
-## Interest Expense
+```{r}
+dataset_IE <- as.data.frame(readSDMX(
+  providerId = 'IMF_DATA',
+  resource = 'data',
+  flowRef = flowref,
+  key = key,
+  start=1960
+))
+```
+
+```{r}
+df_IE <- dataset_IE %>%
+  arrange(TIME_PERIOD) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = case_when(
+      SECTOR == "S13" ~ "Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency",
+      SECTOR == "S1311B" ~ "Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency"
+    ),
+    `Indicator Code` = case_when(
+      SECTOR == "S13" ~ "GG_GEI_G01_XDC",
+      SECTOR == "S1311B" ~ "BCG_GEI_G01_XDC"
+    ),
+    `Attribute` = "Value",
+    OBS_VALUE = as.numeric(OBS_VALUE),
+    TIME_PERIOD
+  ) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) %>%
+  select(-`NA`) %>%
+  filter(!is.na(`Indicator Code`))
+```
+
+## Combine and Save
+
+```{r}
+df_imf_annual <- bind_rows(
+  df_ER,
+  df_CPI,
+  df_CA,
+  df_M2,
+  df_IE
+)
+```
+
+```{r}
+source("../../src/utils/imf_split.R")
+
+split_dfs <- split_imf_data(df_imf_annual)
+```
+
+```{r}
+source("../../src/utils/save_timestamp.R")
+
+# separately save each group with timestamp
+timestamp_save(
+  df = split_dfs$adv,
+  filename = "adv_annual",
+  format = "csv",
+  source = "IMF",
+  frequency = "annual"
+)
+
+timestamp_save(
+  df = split_dfs$developing,
+  filename = "developing_annual",
+  format = "csv",
+  source = "IMF",
+  frequency = "annual"
+)
+
+timestamp_save(
+  df = split_dfs$other,
+  filename = "other_annual",
+  format = "csv",
+  source = "IMF",
+  frequency = "annual"
+)
+
+# also save the combined file
+timestamp_save(
+  df = df_imf_annual,
+  filename = "all_annual",
+  format = "csv",
+  source = "IMF",
+  frequency = "annual"
+)
+```
+
