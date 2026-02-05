@@ -1,0 +1,161 @@
+# Statistics 
+
+comparing the old and the new one (especially the annual data)
+
+## Loading
+
+```{r}
+#| message: false
+library(tidyverse)
+library(visdat)
+library(patchwork)
+library(skimr)
+```
+
+```{r}
+#| message: false
+#| warning: false
+df_new <- read_csv("../../data/imf_processed/all_annual.csv")
+
+df_old_adv <- read_csv("../../examples/imf/adv_annual.csv")
+df_old_dev <- read_csv("../../examples/imf/developing_annual.csv")
+df_old_oth <- read_csv("../../examples/imf/other_annual.csv")
+```
+
+Combine the old ones
+```{r}
+df_old_comb <- tibble()
+for (df in list(df_old_adv, df_old_dev, df_old_oth)) {
+  df <- df %>%
+    select(`Country Name`, `Country Code`, `Indicator Name`, `Indicator Code`, Attribute, `1960`:`2024`) %>%
+    mutate(across(`1960`:`2024`, as.numeric))
+  df_old_comb <- bind_rows(df_old_comb, df) 
+}
+```
+
+```{r}
+df_new <- df_new %>%
+  select(`Country Name`, `Country Code`, `Indicator Name`, `Indicator Code`, Attribute, `1960`:`2024`) %>%
+  mutate(across(`1960`:`2024`, as.numeric)) %>%
+  arrange(`Indicator Code`, `Country Code`)
+```
+
+Filtering the old one for the new indicators
+```{r}
+df_old <- df_old_comb %>%
+  filter(
+    `Indicator Code` %in% unique(df_new$`Indicator Code`),
+    Attribute == "Value"
+    ) %>%
+  arrange(`Indicator Code`, `Country Code`)
+```
+
+## Comparison
+
+```{r}
+indicator <- "ENDA_XDC_USD_RATE"
+df_new_ind <- df_new %>%
+  filter(`Indicator Code` == indicator)
+df_old_ind <- df_old %>%
+  filter(`Indicator Code` == indicator)
+```
+
+Lets start with a visual comparison
+```{r}
+vis_dat(df_old_ind) + vis_dat(df_new_ind) +
+  plot_annotation(title = indicator) +
+  plot_layout(guides = "collect")
+```
+=> Looks very similar in structure
+
+Differences in country codes present in new, but not in old
+```{r}
+present_new <- setdiff(df_new_ind$`Country Code`, df_old_ind$`Country Code`)
+df_new_ind %>%
+  filter(`Country Code` %in% present_new) %>%
+  select(`Country Name`, `Country Code`) %>%
+  distinct()
+```
+= well USSR is quote outdated, and Caymen Islands is not that important
+
+Other way around
+```{r}
+present_old <- setdiff(df_old_ind$`Country Code`, df_new_ind$`Country Code`)
+df_old_ind %>%
+  filter(`Country Code` %in% present_old) %>%
+  select(`Country Name`, `Country Code`) %>%
+  distinct()
+```
+= seems to be mostly small islands belinging to the UK, regional groupings, and an old code for North yemen (existed until 1990)
+
+Lets filter them out
+```{r}
+df_old_ind <- df_old_ind %>% 
+  filter(!`Country Code` %in% present_old) %>%
+  mutate(`Country Code` = as.character(`Country Code`))
+  
+df_new_ind <- df_new_ind %>% filter(!`Country Code` %in% present_new)
+```
+
+Now we can compare the actual values
+```{r}
+compare <- diffdf::diffdf(
+  df_old_ind, df_new_ind,
+  strict_numeric = F,
+  keys = c("Country Code"),
+  tolerance = 0.001
+)
+```
+
+```{r}
+compare$NumDiff
+# compare                # print all of it
+# compare$VarDiff_2017   # example of differences in 2017, the old one does not have data for it...
+```
+
+- Some names differ for countries (as expected)
+- the description has a typo (that should not be relevant)
+- Values are almost identical (just in some years there is one or two observations missing)
+
+For quick comparison, lets build some summary statistics 
+```{r}
+summary_old <- df_old_ind %>%
+  pivot_longer(cols = `1960`:`2024`, names_to = "Year", values_to = "Value") %>%
+  group_by(Year) %>%
+  summarise(
+    mean = mean(Value, na.rm = T),
+    sd = sd(Value, na.rm = T),
+    min = min(Value, na.rm = T),
+    max = max(Value, na.rm = T),
+    n = n(),
+    n_na = sum(is.na(Value))
+  ) %>%
+  mutate(Source = "Old")
+
+summary_new <- df_new_ind %>%
+  pivot_longer(cols = `1960`:`2024`, names_to = "Year", values_to = "Value") %>%
+  group_by(Year) %>%
+  summarise(
+    mean = mean(Value, na.rm = T),
+    sd = sd(Value, na.rm = T),
+    min = min(Value, na.rm = T),
+    max = max(Value, na.rm = T),
+    n = n(),
+    n_na = sum(is.na(Value))
+  ) %>%
+  mutate(Source = "New")
+
+summary_comb <- bind_rows(summary_old, summary_new) %>%
+  mutate(Year = as.integer(Year))
+summary_comb
+```
+
+```{r}
+skim_df1 <- skim(df_new_ind) %>% reframe(skim_variable, numeric.mean, n_missing,source = "new")
+skim_df2 <- skim(df_old_ind) %>% reframe(skim_variable, numeric.mean, n_missing,source = "old")
+
+skim_df1 %>% 
+  bind_rows(skim_df2) %>%
+  arrange(skim_variable, source)
+```
+
