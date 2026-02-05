@@ -107,6 +107,7 @@ df_IR <- dataset_IR %>%
     `Indicator Code` = "FPOLM_PA", 
     `Attribute` = "Value",
     TIME_PERIOD = gsub("-", "", TIME_PERIOD),
+    TIME_PERIOD = gsub("M0", "M", TIME_PERIOD),
     OBS_VALUE
   ) %>%
   pivot_wider(
@@ -140,22 +141,25 @@ source("../../src/utils/save_timestamp.R")
 
 timestamp_save(
   df = split_dfs$adv,
-  filename = "adv_monthly.xlsx",
+  filename = "adv_monthly",
   source = "IMF",
+  format = "csv",
   frequency = "monthly"
 )
 
 timestamp_save(
   df = split_dfs$developing,
-  filename = "developing_monthly.xlsx",
+  filename = "developing_monthly",
   source = "IMF",
+  format = "csv",
   frequency = "monthly"
 )
 
 timestamp_save(
   df = split_dfs$other,
-  filename = "others_monthly.xlsx",
+  filename = "others_monthly",
   source = "IMF",
+  format = "csv",
   frequency = "monthly"
 )
 
@@ -163,7 +167,8 @@ timestamp_save(
 
 timestamp_save(
   df = df_imf_monthly,
-  filename = "all_monthly.xlsx",
+  filename = "all_monthly",
+  format = "csv",
   source = "IMF",
   frequency = "monthly"
 )

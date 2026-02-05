@@ -4,7 +4,7 @@ library(writexl)
 library(lubridate)
 
 
-timestamp_save <- function (df, filename, source, frequency) {
+timestamp_save <- function (df, filename, source, frequency, format) {
   log_file <- "../../last_successful_run.csv"
   current_commit <- substr( system("git rev-parse HEAD", intern = TRUE), 0,7)
   
@@ -14,12 +14,21 @@ timestamp_save <- function (df, filename, source, frequency) {
   
   # (try to) save
   tryCatch({ # Try to save the file
+    if (format == "xlsx") {
       write_xlsx(
         x = list(filename = df), 
-        path = paste0("../../data/imf_processed/",filename),
+        path = paste0("../../data/imf_processed/",filename,".xlsx"),
         format_headers=F 
       )
-      print(paste0("Saved {", filename, "} from ", source, " on: ", current_time_str))
+    } else if (format == "csv") {
+      write_csv(
+        x = df, 
+        file = paste0("../../data/imf_processed/",filename,".csv")
+      )
+    } else {
+      stop(paste0("Unsupported format: ", format))
+    }
+      print(paste0("Saved {", filename, "} from ", source, " on: ", current_time_str, " as ", format))
       status <- "Success"
     }, error = function(e) { # Catch any errors during saving
       print(paste0("Error saving file: ", filename))
@@ -32,6 +41,7 @@ timestamp_save <- function (df, filename, source, frequency) {
         filename = filename,
         source = source,
         frequency = frequency,
+        format = format,
         last_run = current_time_str,
         code_version = current_commit,
         status = status,
