@@ -1,0 +1,135 @@
+# National Accounts
+
+Table: [nama_10_gdp](https://ec.europa.eu/eurostat/databrowser/view/nama_10_gdp/default/table?lang=en)
+
+Countries: all
+Years: 2010-current
+
+ESA Indicators:
+- B1GQ: GDP at market prices
+- P3_S13: Final consumption expenditure of general government
+- P31_S14_S15: Household and NPISH final consumption expenditure
+- P51G: Gross fixed capital formation
+- P6: Exports of goods and services
+- P7: Imports of goods and services
+
+Units:
+- CLV_I10: Chain linked volumes (2010=100)
+- CP_MNAC: Current prices, million euro
+
+for Quarterly: Adjusmtnets
+- NSA: Not seasonally adjusted
+- SA: Seasonally adjusted
+- SCA: Seasonally adjusted and calendar adjusted
+
+
+```{r}
+library(tidyverse)
+library(eurostat)
+library(countrycode)
+```
+
+## Annual national accounts
+
+```{r}
+df_annual_raw <- get_eurostat(
+  "nama_10_gdp", 
+  filters=list(
+    na_item = c("B1GQ", "P3_S13", "P31_S14_S15", "P51G", "P6", "P7"),
+    unit = c("CLV_I10", "CP_MNAC"),
+    sinceTimePeriod=2010
+    ),
+  )
+
+df_annual_raw <- label_eurostat(df_annual_raw, code=c("na_item","unit"), countrycode=c("iso3c") )
+```
+
+```{r}
+df_annual <- df_annual_raw %>%
+  filter(str_length(geo) == 3) %>% # only countries, no aggregates
+  mutate(
+    WEFM_code = case_when(
+      # chain linked codes
+      na_item_code == "B1GQ" & unit_code == "CLV_I10" ~ "YER",
+      na_item_code == "P3_S13" & unit_code == "CLV_I10" ~ "GCR",
+      na_item_code == "P31_S14_S15" & unit_code == "CLV_I10" ~ "PCR",
+      na_item_code == "P51G" & unit_code == "CLV_I10" ~ "ITR",
+      na_item_code == "P6" & unit_code == "CLV_I10" ~ "XTR",
+      na_item_code == "P7" & unit_code == "CLV_I10" ~ "MTR",
+      # current price codes
+      na_item_code == "B1GQ" & unit_code == "CP_MNAC" ~ "YEN",
+      na_item_code == "P3_S13" & unit_code == "CP_MNAC" ~ "GCN",
+      na_item_code == "P31_S14_S15" & unit_code == "CP_MNAC" ~ "PCR",
+      na_item_code == "P51G" & unit_code == "CP_MNAC" ~ "ITN",
+      na_item_code == "P6" & unit_code == "CP_MNAC" ~ "XTN",
+      na_item_code == "P7" & unit_code == "CP_MNAC" ~ "MTN",
+    ),
+    FINAL_CODE = paste0(geo, "_", WEFM_code, "_ESTAT"),
+    year = year(time),
+    country_name = countrycode(geo, "iso3c", "country.name")
+  ) %>%
+  select(na_item, country_name, unit, FINAL_CODE, year, values) %>%
+  pivot_wider(names_from = year, values_from = values) 
+```
+
+```{r}
+df_annual
+```
+
+```{r}
+write_csv(df_annual, "../../data/eurostat_processed/National_Accounts_A.csv")
+```
+
+
+## Quarterly national accounts
+
+```{r}
+df_quarterly_raw <- get_eurostat(
+  "namq_10_gdp", 
+  filters=list(
+    na_item = c("B1GQ", "P3_S13", "P31_S14_S15", "P51G", "P6", "P7"),
+    unit = c("CLV_I10", "CP_MNAC"),
+    s_adj = c("NSA", "SA", "SCA"),
+    sinceTimePeriod=2010
+  ),
+)
+
+df_quarterly_raw <- label_eurostat(df_quarterly_raw, code=c("na_item","unit","s_adj"), countrycode=c("iso3c") )
+```
+
+```{r}
+df_quarterly <- df_quarterly_raw %>%
+  filter(str_length(geo) == 3) %>%# only countries, no aggregates
+  mutate(
+    WEFM_code = case_when(
+      # chain linked codes
+      na_item_code == "B1GQ" & unit_code == "CLV_I10" ~ "YER",
+      na_item_code == "P3_S13" & unit_code == "CLV_I10" ~ "GCR",
+      na_item_code == "P31_S14_S15" & unit_code == "CLV_I10" ~ "PCR",
+      na_item_code == "P51G" & unit_code == "CLV_I10" ~ "ITR",
+      na_item_code == "P6" & unit_code == "CLV_I10" ~ "XTR",
+      na_item_code == "P7" & unit_code == "CLV_I10" ~ "MTR",
+      # current price codes
+      na_item_code == "B1GQ" & unit_code == "CP_MNAC" ~ "YEN",
+      na_item_code == "P3_S13" & unit_code == "CP_MNAC" ~ "GCN",
+      na_item_code == "P31_S14_S15" & unit_code == "CP_MNAC" ~ "PCR",
+      na_item_code == "P51G" & unit_code == "CP_MNAC" ~ "ITN",
+      na_item_code == "P6" & unit_code == "CP_MNAC" ~ "XTN",
+      na_item_code == "P7" & unit_code == "CP_MNAC" ~ "MTN",
+    ),
+    FINAL_CODE = paste0(geo, "_", WEFM_code, "_",s_adj_code, "_ESTAT_Q"),
+    year = year(time),
+    quarter = quarter(time),
+    time_period = paste0(year, "Q", quarter),
+    country_name = countrycode(geo, "iso3c", "country.name")
+  ) %>%
+  select(na_item, country_name, unit, s_adj, FINAL_CODE,time_period, values) %>%
+  pivot_wider(names_from = time_period, values_from = values)
+
+df_quarterly
+```
+
+```{r}
+write_csv(df_quarterly, "../../data/eurostat_processed/National_Accounts_Q.csv")
+```
+

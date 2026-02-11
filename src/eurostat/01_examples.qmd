@@ -1,0 +1,91 @@
+# Looking at the Eurostat Data
+
+Sources:
+
+- National Accounts data: 
+  - annual: [nama_10_gdp](https://ec.europa.eu/eurostat/databrowser/view/nama_10_gdp/default/table?lang=en)
+  - quarterly: [namq_10_gdp](https://ec.europa.eu/eurostat/databrowser/view/namq_10_gdp/default/table?lang=en)
+- Inflation data: 
+  - monthly: [prc_hicp_midx](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_midx/default/table?lang=en)
+  - annual: [prc_hicp_aind](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_aind/default/table?lang=en)
+- Unemployment data
+  - monthly: [une_rt_m](https://ec.europa.eu/eurostat/databrowser/view/une_rt_m/default/table?lang=en)
+  - annual: [une_rt_a](https://ec.europa.eu/eurostat/databrowser/view/une_rt_a/default/table?lang=en)
+
+## Loading
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+The excel sheet is a mess:
+```{r}
+excel_sheets("../../examples/eurostat/Eurostat.xlsx")
+```
+
+## Annual
+
+```{r}
+df_annual <- read_excel("../../examples/eurostat/Eurostat.xlsx", sheet="Annual",)
+df_annual <- df_annual %>%
+  rename(
+    `indicator` = `...1`,
+    `country` = `...2`,
+    `unit` = `...3`,
+    `code` = `...4`
+  )
+```
+
+```{r}
+df_annual %>%
+  filter(country=="Germany") %>%
+  select(indicator, unit, code) %>%
+  unique()
+```
+
+Vars: Current Prices + Chain linked volumnes (2010=100): - GDP at market prices - Final consumption expenditure of general government - Household and NPISH final consumption expenditure - Gross fixed capital formation - Exports of goods and services - Imports of goods and services
+
+-   All-items HICP: Annual Average Index
+-   Unemployment Rate: Total
+
+| Desc | Unit | Code |
+|----|----|----|
+| GDP at market prices | Current + Chain | XXX_YER_ESTAT   |
+| Final consumption expenditure of general government | \-""- | XXX_GCR_ESTAT |
+| Household and NPISH final consumption expenditure | \-""- | XXX_PCR_ESTAT |
+| Gross fixed capital formation | \-""- | XXX_ITR_ESTAT |
+| Exports of goods and services | \-""- | XXX_XTR_ESTAT |
+| Imports of goods and services | \-""- | XXX_MTR_ESTAT |
+| All-items HICP | Annual Average Index | XXX_HIC_ESTAT |
+| Unemployment Rate | Total | XXX_URX_ESTAT |
+
+## Quarterly
+
+```{r}
+df_quarterly <- read_excel("../../examples/eurostat/Eurostat.xlsx", sheet="Quarterly",)
+```
+
+```{r}
+df_quarterly <- df_quarterly %>%
+  rename(
+    indicator = `...1`,
+    country = `...2`,
+    unit = `...3`,
+    adjustment = `...4`,
+    code = `...5`
+  )
+```
+
+```{r}
+df_quarterly %>%
+  filter(country=="Germany") %>%
+  select(indicator,adjustment, unit) %>%
+  unique()
+```
+
+- Same 6 macro variables
+- by chain lined volumes+ current prices
+- by adjustment: seasonally+not calendar,seasonal+calendar,unadjusted 
+= 6x3x2 = 36 variables
+
