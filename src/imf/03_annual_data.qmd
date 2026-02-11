@@ -111,7 +111,7 @@ flowref <- 'CPI'
 COUNTRIES <- "*"
 INDICATOR <- "CPI"
 SECTOR <- "_T"
-TRANSFORMATION <- "IX+YOY_PCH_PA_PT"
+TRANSFORMATION <- "SRP_IX+SRP_YOY_PCH_PA_PT"
 FREQUENCY <- "A"
 
 key_CPI <- paste(COUNTRIES, INDICATOR, SECTOR, TRANSFORMATION, FREQUENCY, sep = ".")
@@ -136,12 +136,12 @@ df_CPI <- dataset_CPI %>%
      `Country Name` = Name,
      `Country Code` = Code,
      `Indicator Name` = case_when(
-       TYPE_OF_TRANSFORMATION == "IX" ~ "Prices, Consumer Price Index, All items, Index",
-       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent"
+       TYPE_OF_TRANSFORMATION == "SRP_IX" ~ "Prices, Consumer Price Index, All items, Index",
+       TYPE_OF_TRANSFORMATION == "SRP_YOY_PCH_PA_PT" ~ "Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent"
      ),
      `Indicator Code` = case_when(
-       TYPE_OF_TRANSFORMATION == "IX" ~ "PCPI_IX",
-       TYPE_OF_TRANSFORMATION == "YOY_PCH_PA_PT" ~ "PCPI_PC_CP_A_PT"
+       TYPE_OF_TRANSFORMATION == "SRP_IX" ~ "PCPI_IX",
+       TYPE_OF_TRANSFORMATION == "SRP_YOY_PCH_PA_PT" ~ "PCPI_PC_CP_A_PT"
      ),
      Attribute = "Value",
      OBS_VALUE = as.numeric(OBS_VALUE),
@@ -162,12 +162,13 @@ df_CPI
 - WESP Code: *BCANET$ / BCAXF_BP6_USD
 - WESP Desc: Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars
 
-- IMF Database: [WEO](https://data.imf.org/en/datasets/IMF.RES:WEO)
-- IMF Code: BCA
+- IMF Database: [BOP](https://data.imf.org/en/datasets/IMF.RES:BOP)
+- IMF Code: NETCD_T, CABXEF; USD;
+- IMF Desc: Net; Balance of Payments, Excluding Exceptional Financing; US Dollars
 
 ```{r}
-flowref <- 'WEO'
-key <- "*.BCA.A"
+flowref <- 'BOP'
+key <- "*.NETCD_T.CABXEF.USD.A"
 ```
 
 ```{r}

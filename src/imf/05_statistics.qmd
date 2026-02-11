@@ -31,6 +31,7 @@ for (df in list(df_old_adv, df_old_dev, df_old_oth)) {
     mutate(across(`1960`:`2024`, as.numeric))
   df_old_comb <- bind_rows(df_old_comb, df) 
 }
+rm(df_old_adv, df_old_dev, df_old_oth)
 ```
 
 ```{r}
@@ -47,10 +48,11 @@ df_old <- df_old_comb %>%
     `Indicator Code` %in% unique(df_new$`Indicator Code`),
     Attribute == "Value"
     ) %>%
-  arrange(`Indicator Code`, `Country Code`)
+  arrange(`Indicator Code`, `Country Code`) %>%
+  mutate(`Country Code` = as.character(`Country Code`))
 ```
 
-## Comparison
+## Ex.: ENDA_XDC_USD_RATE
 
 ```{r}
 indicator <- "ENDA_XDC_USD_RATE"
@@ -90,10 +92,7 @@ df_old_ind %>%
 
 Lets filter them out
 ```{r}
-df_old_ind <- df_old_ind %>% 
-  filter(!`Country Code` %in% present_old) %>%
-  mutate(`Country Code` = as.character(`Country Code`))
-  
+df_old_ind <- df_old_ind %>% filter(!`Country Code` %in% present_old) 
 df_new_ind <- df_new_ind %>% filter(!`Country Code` %in% present_new)
 ```
 
@@ -118,37 +117,6 @@ compare$NumDiff
 - Values are almost identical (just in some years there is one or two observations missing)
 
 For quick comparison, lets build some summary statistics 
-```{r}
-summary_old <- df_old_ind %>%
-  pivot_longer(cols = `1960`:`2024`, names_to = "Year", values_to = "Value") %>%
-  group_by(Year) %>%
-  summarise(
-    mean = mean(Value, na.rm = T),
-    sd = sd(Value, na.rm = T),
-    min = min(Value, na.rm = T),
-    max = max(Value, na.rm = T),
-    n = n(),
-    n_na = sum(is.na(Value))
-  ) %>%
-  mutate(Source = "Old")
-
-summary_new <- df_new_ind %>%
-  pivot_longer(cols = `1960`:`2024`, names_to = "Year", values_to = "Value") %>%
-  group_by(Year) %>%
-  summarise(
-    mean = mean(Value, na.rm = T),
-    sd = sd(Value, na.rm = T),
-    min = min(Value, na.rm = T),
-    max = max(Value, na.rm = T),
-    n = n(),
-    n_na = sum(is.na(Value))
-  ) %>%
-  mutate(Source = "New")
-
-summary_comb <- bind_rows(summary_old, summary_new) %>%
-  mutate(Year = as.integer(Year))
-summary_comb
-```
 
 ```{r}
 skim_df1 <- skim(df_new_ind) %>% reframe(skim_variable, numeric.mean, n_missing,source = "new")
@@ -157,5 +125,274 @@ skim_df2 <- skim(df_old_ind) %>% reframe(skim_variable, numeric.mean, n_missing,
 skim_df1 %>% 
   bind_rows(skim_df2) %>%
   arrange(skim_variable, source)
+```
+
+## Functions
+
+Automate the analysis
+
+```{r}
+get_dfs <- function(indicator) {
+  df_new_ind <- df_new %>%
+    filter(`Indicator Code` == indicator)
+  df_old_ind <- df_old %>%
+    filter(`Indicator Code` == indicator)
+  list(new = df_new_ind, old = df_old_ind)
+}
+```
+
+```{r}
+visualize <- function(df_old_ind, df_new_ind, indicator) {
+  vis_dat(df_old_ind) + vis_dat(df_new_ind) +
+    plot_annotation(title = indicator) +
+    plot_layout(guides = "collect")
+}
+```
+
+```{r}
+get_country_diffs <- function(df_old_ind, df_new_ind) {
+  present_new <- setdiff(df_new_ind$`Country Code`, df_old_ind$`Country Code`)
+  present_old <- setdiff(df_old_ind$`Country Code`, df_new_ind$`Country Code`)
+  # print codes and names in list
+
+  df_old_ind %>%
+    filter(`Country Code` %in% present_old) %>%
+    select(`Country Name`, `Country Code`) %>%
+    rename(`Only in Old` = "Country Name") %>%
+    distinct() %>%
+    print()
+  df_new_ind %>%
+    filter(`Country Code` %in% present_new) %>%
+    select(`Country Name`, `Country Code`) %>%
+    rename(`Only in New` = "Country Name") %>%
+    distinct() %>%
+    print()
+}
+```
+
+```{r}
+filter_diffs <- function(df_old_ind, df_new_ind) {
+  present_new <- setdiff(df_new_ind$`Country Code`, df_old_ind$`Country Code`)
+  present_old <- setdiff(df_old_ind$`Country Code`, df_new_ind$`Country Code`)
+  
+  df_old_ind <- df_old_ind %>% filter(!`Country Code` %in% present_old) 
+  df_new_ind <- df_new_ind %>% filter(!`Country Code` %in% present_new)
+  list(old = df_old_ind, new = df_new_ind)
+}
+```
+
+```{r}
+compare_values <- function(df_old_ind, df_new_ind, tolerance = 0.001) {
+  compare <- diffdf::diffdf(
+    df_old_ind, df_new_ind,
+    strict_numeric = F,
+    keys = c("Country Code"),
+    tolerance = tolerance
+  )
+  compare
+}
+```
+
+```{r}
+plot_compare <- function(compare, indicator) {
+  compare$NumDiff %>% 
+    filter(Variable != "Country Name") %>%
+    ggplot(aes(x = Variable, y = `No of Differences`)) +
+    geom_col() +
+    plot_annotation(
+      title = paste("Number of differences for", indicator),
+      subtitle = paste("Total countries", compare$DataSummary$BASE[[3]])
+      )
+}
+```
+
+```{r}
+summary_statistics <- function(df_new_ind, df_old_ind, compare) {
+  pct_diff <- sum( # nr of differences in values divided by total number of cells
+    compare$NumDiff %>% filter(Variable != "Country Name") %>% pull(`No of Differences`)) /
+    (as.numeric(compare$DataSummary$BASE[[3]]) *   # rows
+       as.numeric(compare$DataSummary$BASE[[4]])   # columns
+     )
+
+  df_new_ind %>%
+    reframe(
+      Indicator_Code = first(`Indicator Code`),
+      Indicator_Name = str_trunc(first(`Indicator Name`), 30, "right"),
+      n_countries = n_distinct(`Country Code`),
+      pct_NA = mean(is.na(across(`1960`:`2024`) %>% as.matrix())),
+      pct_NA_2010_2020 = mean(is.na(across(`2010`:`2020`) %>% as.matrix())),
+      pct_diff = pct_diff
+    )
+}
+```
+
+
+## PCPI_PC_CP_A_PT
+
+```{r}
+dfs_pcpi <- get_dfs("PCPI_PC_CP_A_PT")
+visualize(dfs_pcpi$old, dfs_pcpi$new, "PCPI_PC_CP_A_PT")
+```
+
+```{r}
+get_country_diffs(dfs_pcpi$old, dfs_pcpi$new)
+```
+similar to before, some regional groupings and some small islands
+
+```{r}
+filtered_dfs_pcpi <- filter_diffs(dfs_pcpi$old, dfs_pcpi$new)
+compare_pcpi <- compare_values(filtered_dfs_pcpi$old, filtered_dfs_pcpi$new, tolerance = 0.01)
+```
+
+```{r}
+plot_compare(compare_pcpi, "PCPI_PC_CP_A_PT")
+```
+in recent years = much more differences, probably data updates
+
+```{r}
+summary_pcpi <- summary_statistics(filtered_dfs_pcpi$new, filtered_dfs_pcpi$old, compare_pcpi)
+summary_pcpi
+```
+
+## PCPI_IX
+
+```{r}
+dfs_pcpi_ix <- get_dfs("PCPI_IX")
+visualize(dfs_pcpi_ix$old, dfs_pcpi_ix$new, "PCPI_IX")
+```
+
+```{r}
+get_country_diffs(dfs_pcpi_ix$old, dfs_pcpi_ix$new)
+```
+same countries / regions as before
+
+```{r}
+filtered_dfs_pcpi_ix <- filter_diffs(dfs_pcpi_ix$old, dfs_pcpi_ix$new)
+compare_pcpi_ix <- compare_values(filtered_dfs_pcpi_ix$old, filtered_dfs_pcpi_ix$new, tolerance = 0.0001)
+```
+```{r}
+plot_compare(compare_pcpi_ix, "PCPI_IX")
+```
+later years = more differences, even more than before
+
+```{r}
+summary_pcpi_ix <- summary_statistics(filtered_dfs_pcpi_ix$new, filtered_dfs_pcpi_ix$old, compare_pcpi_ix)
+summary_pcpi_ix
+```
+
+## BCAXF_BP6_USD
+
+```{r}
+dfs_bcaxf <- get_dfs("BCAXF_BP6_USD")
+visualize(dfs_bcaxf$old, dfs_bcaxf$new, "BCAXF_BP6_USD")
+```
+that looks really good already
+
+```{r}
+get_country_diffs(dfs_bcaxf$old, dfs_bcaxf$new)
+```
+The new data has a lot more countries
+
+```{r}
+filtered_dfs_bcaxf <- filter_diffs(dfs_bcaxf$old, dfs_bcaxf$new)
+compare_bcaxf <- compare_values(filtered_dfs_bcaxf$old, filtered_dfs_bcaxf$new, tolerance = 1e+6)
+```
+
+```{r}
+plot_compare(compare_bcaxf, "BCAXF_BP6_USD")
+```
+and also a lot more data in recent years
+
+```{r}
+summary_bcaxf <- summary_statistics(filtered_dfs_bcaxf$new, filtered_dfs_bcaxf$old, compare_bcaxf)
+summary_bcaxf
+```
+
+If we take a closer look at the differences, it is quite clear that they are small and mostly data updates
+```{r}
+compare_bcaxf$VarDiff_2017
+```
+
+## FMB_XDC
+
+```{r}
+dfs_fmb <- get_dfs("FMB_XDC")
+visualize(dfs_fmb$old, dfs_fmb$new, "FMB_XDC")
+```
+Note that the new one also has much more countries, looks less than it is
+
+```{r}
+get_country_diffs(dfs_fmb$old, dfs_fmb$new)
+```
+```{r}
+filtered_dfs_fmb <- filter_diffs(dfs_fmb$old, dfs_fmb$new)
+compare_fmb <- compare_values(filtered_dfs_fmb$old, filtered_dfs_fmb$new, tolerance = 1e+12)
+```
+```{r}
+plot_compare(compare_fmb, "FMB_XDC")
+```
+```{r}
+summary_fmb <- summary_statistics(filtered_dfs_fmb$new, filtered_dfs_fmb$old, compare_fmb)
+summary_fmb
+```
+
+## GG_GEI_G01_XDC 
+
+```{r}
+dfs_gg_gei <- get_dfs("GG_GEI_G01_XDC")
+visualize(dfs_gg_gei$old, dfs_gg_gei$new, "GG_GEI_G01_XDC")
+```
+```{r}
+get_country_diffs(dfs_gg_gei$old, dfs_gg_gei$new)
+```
+
+```{r}
+filtered_dfs_gg_gei <- filter_diffs(dfs_gg_gei$old, dfs_gg_gei$new)
+compare_gg_gei <- compare_values(filtered_dfs_gg_gei$old, filtered_dfs_gg_gei$new, tolerance = 1e+12)
+```
+
+```{r}
+summary_gg_gei <- summary_statistics(filtered_dfs_gg_gei$new, filtered_dfs_gg_gei$old, compare_gg_gei)
+```
+
+## BCG_GEI_G01_XDC
+ 
+```{r}
+dfs_bcg_gei <- get_dfs("BCG_GEI_G01_XDC")
+visualize(dfs_bcg_gei$old, dfs_bcg_gei$new, "BCG_GEI_G01_XDC")
+```
+
+```{r}
+filtered_dfs_bcg_gei <- filter_diffs(dfs_bcg_gei$old, dfs_bcg_gei$new)
+compare_bcg_gei <- compare_values(filtered_dfs_bcg_gei$old, filtered_dfs_bcg_gei$new, tolerance = 1e+12)
+summary_bcg_gei <- summary_statistics(filtered_dfs_bcg_gei$new, filtered_dfs_bcg_gei$old, compare_bcg_gei)
+```
+
+## ENDA_XDC_USD_RATE
+
+quicly reviewing the first one again, just to check if the functions work as expected
+
+```{r}
+dfs_xdc <- get_dfs("ENDA_XDC_USD_RATE")
+filtered_dfs_xdc <- filter_diffs(dfs_xdc$old, dfs_xdc$new)
+compare_xdc <- compare_values(filtered_dfs_xdc$old, filtered_dfs_xdc$new, tolerance = 0.001)
+summary_xdc <- summary_statistics(filtered_dfs_xdc$new, filtered_dfs_xdc$old, compare_xdc)
+```
+
+
+
+## Summaries
+
+```{r}
+summary_all <- bind_rows(
+  summary_xdc,
+  summary_pcpi,
+  summary_pcpi_ix,
+  summary_bcaxf,
+  summary_fmb,
+  summary_gg_gei,
+  summary_bcg_gei
+)
+summary_all
 ```
 
