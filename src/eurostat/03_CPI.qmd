@@ -6,6 +6,11 @@ library(eurostat)
 library(countrycode)
 ```
 
+Eurostat Cache sometimes has to be cleared
+```{r}
+#clean_eurostat_cache()
+```
+
 
 ## Annual CPI
 

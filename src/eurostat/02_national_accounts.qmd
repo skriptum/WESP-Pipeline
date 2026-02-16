@@ -29,6 +29,12 @@ library(eurostat)
 library(countrycode)
 ```
 
+Sometimes the Eurostat cache can cause issues, especially if there have been updates to the data. If you encounter any problems with the data retrieval, you can try clearing the cache using the following command:
+```{r}
+#clean_eurostat_cache()
+```
+
+
 ## Annual national accounts
 
 ```{r}

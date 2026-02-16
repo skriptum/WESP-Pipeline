@@ -11,6 +11,11 @@ library(tidyverse)
 library(countrycode)
 ```
 
+As before, the Eurostat cache sometimes has to be cleared
+```{r}
+#clean_eurostat_cache()
+```
+
 
 ## Annual
   
