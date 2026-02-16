@@ -100,7 +100,7 @@ Hres a file tree with a little explanation
 
 ## Data Sources
 
-**IMF**
+### IMF
 
 Monthly Data:
 
@@ -121,17 +121,25 @@ Annual Data
 | QGFS        | G24_T_XDC; S13         | *gg_gei_g01_xdc  | Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency |
 | QGFS        | G24_T_XDC; S1311B      | *bcg_gei_g01_xdc | Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency |
 
+### Eurostat
+
+| Indicators               | Unit                                                         | Adjustment                                | Eurostat Dataset (LINKS ARE WITH PRESELECTION!)              | Code                          |
+| ------------------------ | ------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------ | ----------------------------- |
+| Annual GDP components    | Chain Linked Volums (2010); Current Prices (millions of nat. curr) | None                                      | [NAMA_10_GDP](https://ec.europa.eu/eurostat/databrowser/view/NAMA_10_GDP__custom_15679333/default/table?lang=en) | {ISO}\_{CODE}\_{ADJ}\_ESTAT_Q |
+| Quarterly GDP Components | Chain Linked Volums (2010); Current Prices (millions of nat. curr) | unadjusted; Seasonal; Seasonal + Calendar | [NAMQ_10_GDP](https://ec.europa.eu/eurostat/databrowser/view/namq_10_gdp__custom_20133126/default/table) | {ISO}\_{CODE}\_{ADJ}\_ESTAT_Q |
+| Annual Unemployment      | % of pop in labour force (age 15-74)                         | None                                      | [UNE_RT_A](https://ec.europa.eu/eurostat/databrowser/view/une_rt_a__custom_15679523/default/table?lang=en) | {ISO}_URX_ESTAT               |
+| Monthly Unemployment     | % of pop in labour force (total pop)                         | Seasonal                                  | [UNE_RT_M](https://ec.europa.eu/eurostat/databrowser/view/une_rt_m__custom_20133163/default/table) | {ISO}_URX_ESTAT_M             |
+| Annual HICP              | All-items HICP, Annual Average                               | None                                      | [PRC_HICP_AIND](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_aind__custom_15679491/default/table?lang=en) | {ISO}_HIC_ESTAT               |
+| Monthly HICP             | All-items HICP, 2015=100                                     | None                                      | [PRC_HICP_MIDX](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_midx__custom_15679516/default/table?lang=en) | {ISO}_HIC_ESTAT_M             |
+
+Annual GDP components are (CLV code / Curr Pr code)
+
+- Gross domestic product at market prices (YER / YCN)
+- Final consumption expenditure of general government (GCR / GCN)
+- Household and NPISH final consumption expenditure (PCR / PCN)
+- Gross fixed capital formation (ITR / ITN)
+- Exports of goods and services (XTR / XTN)
+- Imports of goods and services (MTR / MTN)
 
 
 
-
-
-
-## TODO
-
-- [x] Log Tracker Script
-- [x] Regions Utils Script
-- [ ] Runner Script
-- [x] Key Creation Transparency
-- [x] Workflow explanation
-- [x] Slides for the Workshop

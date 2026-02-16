@@ -1,0 +1,51 @@
+# Combining the tables
+
+into one excel file, with all the quirks that come with it
+
+```{r}
+library(writexl)
+library(tidyverse)
+```
+
+## Read in the processed data
+
+```{r}
+df_ANA <- read_csv("../../data/eurostat_processed/National_Accounts_A.csv")
+df_ANQ <- read_csv("../../data/eurostat_processed/National_Accounts_Q.csv")
+
+df_CPIA <- read_csv("../../data/eurostat_processed/CPI_A.csv")
+df_CPIM <- read_csv("../../data/eurostat_processed/CPI_M.csv", col_names=F)
+
+df_UR_A <- read_csv("../../data/eurostat_processed/UR_A.csv")
+df_UR_M <- read_csv("../../data/eurostat_processed/UR_M.csv", col_names=F)
+```
+
+Build the annual sheet
+```{r}
+df_annual <- df_ANA %>%
+  bind_rows(df_CPIA) %>%
+  bind_rows(df_UR_A) 
+```
+
+Build the monthly sheet
+```{r}
+df_monthly <- df_CPIM %>%
+  # merge horizontally with the UR_M table, which has the same structure
+  bind_cols(df_UR_M %>% select(-X1), .name_repair = "minimal") 
+
+# colnames(df_monthly) <- NULL
+```
+
+## Write to excel
+
+```{r}
+file_name = "../../data/eurostat_processed/EUROSTAT.xlsx"
+
+write_xlsx(
+  list(
+    Annual = df_annual, 
+    Quartery = df_ANQ,
+    Monthly = df_monthly), 
+  file_name)
+```
+
