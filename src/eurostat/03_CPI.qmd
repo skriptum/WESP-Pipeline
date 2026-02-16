@@ -1,0 +1,113 @@
+# CPI 
+
+```{r}
+library(tidyverse)
+library(eurostat)
+library(countrycode)
+```
+
+
+## Annual CPI
+
+from [eurostat prc_hicp_aind](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_aind/default/table?lang=en)
+
+```{r}
+df_cpi_raw <- get_eurostat(
+  "prc_hicp_aind", 
+  filters=list(
+    coicop = "CP00", # all items
+    unit = "INX_A_AVG", # index, annual average (2015=100 at this point in time)
+    sinceTimePeriod=2000
+  ),
+)
+
+df_cpi_raw <- label_eurostat(df_cpi_raw, code=c("coicop","unit"), countrycode=c("iso3c") )
+```
+
+```{r}
+df_cpi <- df_cpi_raw %>%
+  filter(
+    str_length(geo) == 3, # only countries, no aggregates
+    geo != "EEA"
+    ) %>% 
+  mutate(
+    country_name = countrycode(geo, origin="iso3c", destination="country.name"),
+    FINAL_CODE = paste0(geo, "_", "HIC", "_ESTAT"),
+    year = year(time),
+    indicator = coicop
+  ) %>%
+  select(indicator, country_name, unit, FINAL_CODE, year, values) %>%
+  pivot_wider(names_from = year, values_from = values) 
+
+df_cpi
+```
+
+```{r}
+write_csv(df_cpi, "../../data/eurostat_processed/CPI_A.csv")
+```
+
+## Monthly CPI
+
+from [prc_hicp_midx](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_midx/default/table?lang=en)
+
+```{r}
+df_cpim_raw <- get_eurostat(
+  "prc_hicp_midx", 
+  filters=list(
+    coicop = "CP00", # all items
+    unit = "I15", # index, annual average (2015=100 at this point in time)
+    sinceTimePeriod=2000
+  ),
+)
+
+df_cpim_raw <- label_eurostat(df_cpim_raw, code=c("coicop","unit"), countrycode=c("iso3c") )
+```
+
+```{r}
+df_cpim <- df_cpim_raw %>% 
+  filter(
+    str_length(geo) == 3, # only countries, no aggregates
+    geo != "EEA"
+    ) %>%  
+  mutate(
+    country_name = countrycode(geo, origin="iso3c", destination="country.name"),
+    FINAL_CODE = paste0(geo, "_", "HIC", "_ESTAT", "_M"),
+    time = paste0(year(time),"-", str_pad(month(time), 2, pad = "0")),
+    unit = "All-items HICP"
+  ) %>%
+  select(unit, country_name, FINAL_CODE, time, values)
+
+df_cpim
+```
+
+Build a header for the dataframe
+- "All items HICP"
+- "Country Name"
+- FINAL CODE 
+
+```{r}
+df_cpim_header <- df_cpim %>%
+  select(unit, country_name, FINAL_CODE) %>%
+  distinct() %>%
+  t() %>% as_tibble(names) %>%
+  mutate(time="time", .before=1)
+```
+
+
+```{r}
+df_cpim_body <- df_cpim %>%
+  select(FINAL_CODE, time, values) %>%
+  pivot_wider(names_from=FINAL_CODE, values_from=values) 
+  
+colnames(df_cpim_body) <- colnames(df_cpim_header)
+```
+
+```{r}
+df_cpim_full <- rbind(df_cpim_header, df_cpim_body)
+df_cpim_full
+```
+
+```{r}
+write_csv(df_cpim_full, "../../data/eurostat_processed/CPI_M.csv", col_names = FALSE)
+```
+

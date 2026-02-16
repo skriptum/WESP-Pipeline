@@ -37,7 +37,7 @@ df_annual_raw <- get_eurostat(
   filters=list(
     na_item = c("B1GQ", "P3_S13", "P31_S14_S15", "P51G", "P6", "P7"),
     unit = c("CLV_I10", "CP_MNAC"),
-    sinceTimePeriod=2010
+    sinceTimePeriod=2000
     ),
   )
 
@@ -66,9 +66,10 @@ df_annual <- df_annual_raw %>%
     ),
     FINAL_CODE = paste0(geo, "_", WEFM_code, "_ESTAT"),
     year = year(time),
-    country_name = countrycode(geo, "iso3c", "country.name")
+    country_name = countrycode(geo, "iso3c", "country.name"),
+    indicator = na_item
   ) %>%
-  select(na_item, country_name, unit, FINAL_CODE, year, values) %>%
+  select(indicator, country_name, unit, FINAL_CODE, year, values) %>%
   pivot_wider(names_from = year, values_from = values) 
 ```
 
@@ -90,7 +91,7 @@ df_quarterly_raw <- get_eurostat(
     na_item = c("B1GQ", "P3_S13", "P31_S14_S15", "P51G", "P6", "P7"),
     unit = c("CLV_I10", "CP_MNAC"),
     s_adj = c("NSA", "SA", "SCA"),
-    sinceTimePeriod=2010
+    sinceTimePeriod=2000
   ),
 )
 
@@ -121,9 +122,10 @@ df_quarterly <- df_quarterly_raw %>%
     year = year(time),
     quarter = quarter(time),
     time_period = paste0(year, "Q", quarter),
-    country_name = countrycode(geo, "iso3c", "country.name")
+    country_name = countrycode(geo, "iso3c", "country.name"),
+    indicator = na_item
   ) %>%
-  select(na_item, country_name, unit, s_adj, FINAL_CODE,time_period, values) %>%
+  select(indicator, country_name, unit, s_adj, FINAL_CODE,time_period, values) %>%
   pivot_wider(names_from = time_period, values_from = values)
 
 df_quarterly

@@ -1,0 +1,110 @@
+# Unemployment Rate
+
+Sources:
+
+- monthly: [une_rt_m](https://ec.europa.eu/eurostat/databrowser/view/une_rt_m/default/table?lang=en)
+- annual: [une_rt_a](https://ec.europa.eu/eurostat/databrowser/view/une_rt_a/default/table?lang=en)
+
+```{r}
+library(eurostat)
+library(tidyverse)
+library(countrycode)
+```
+
+
+## Annual
+  
+```{r}
+df_unempl_a_raw <- get_eurostat(
+  "une_rt_a", 
+  filters=list(
+    age = "Y15-74",
+    sex = "T",
+    unit = "PC_ACT", # percentage of active population
+    sinceTimePeriod=2000
+  ),
+)
+
+df_unempl_a_raw <- label_eurostat(df_unempl_a_raw, countrycode=c("iso3c"))
+```
+  
+```{r}
+df_unempl_a <- df_unempl_a_raw %>%
+  filter(
+    str_length(geo) == 3, # only countries, no aggregates
+    geo != "EEA"
+  ) %>% 
+  mutate(
+    country_name = countrycode(geo, origin="iso3c", destination="country.name"),
+    FINAL_CODE = paste0(geo, "_URX", "_ESTAT"),
+    year = year(time),
+    indicator = "Unemployment rate",
+    unit = "Total"
+  ) %>%
+  select(indicator, country_name, unit, FINAL_CODE, year, values) %>%
+  pivot_wider(names_from = year, values_from = values)
+```
+
+```{r}
+write_csv(df_unempl_a, "../../data/eurostat_processed/UR_A.csv")
+```
+
+## Monthly
+
+```{r}
+df_unempl_m_raw <- get_eurostat(
+  "une_rt_m",
+  filters = list(
+    age= "TOTAL", # total population (15-74)
+    s_adj = "SA", # seasonally adjusted
+    sex= "T", # both men and women
+    unit = "PC_ACT", # percentage of active population,
+    sinceTimePeriod=2000
+  )
+)
+
+df_unempl_m_raw <- label_eurostat(df_unempl_m_raw, countrycode=c("iso3c"))
+```
+
+```{r}
+df_unempl_m <- df_unempl_m_raw %>%
+  filter(
+    str_length(geo) == 3, # only countries, no aggregates
+    geo != "EEA"
+  ) %>% 
+  mutate(
+    country_name = countrycode(geo, origin="iso3c", destination="country.name"),
+    FINAL_CODE = paste0(geo, "_URX", "_ESTAT", "_M"),
+    time = paste0(year(time),"-", str_pad(month(time), 2, pad = "0")),
+    indicator = "Unemployment Rate"
+  ) %>%
+  select(indicator, country_name, FINAL_CODE, time, values) 
+```
+
+
+Create a separate header for the weird format of the monthly data... 
+```{r}
+df_unempl_m_header <- df_unempl_m %>%
+  select(indicator, country_name, FINAL_CODE) %>%
+  distinct() %>%
+  t() %>% as_tibble(names) %>%
+  mutate(time="time", .before=1)
+```
+
+```{r}
+df_unempl_m_body <- df_unempl_m %>%
+  select(FINAL_CODE, time, values) %>%
+  pivot_wider(names_from=FINAL_CODE, values_from=values)
+
+colnames(df_unempl_m_body) <- colnames(df_unempl_m_header)
+```
+
+```{r}
+df_unempl_m_full <- rbind(df_unempl_m_header, df_unempl_m_body) 
+df_unempl_m_full
+```
+
+```{r}
+write_csv(df_unempl_m_full, "../../data/eurostat_processed/UR_M.csv", col_names = FALSE)
+```
+
