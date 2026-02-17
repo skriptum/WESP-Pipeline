@@ -106,10 +106,12 @@ colnames(df_unempl_m_body) <- colnames(df_unempl_m_header)
 
 ```{r}
 df_unempl_m_full <- rbind(df_unempl_m_header, df_unempl_m_body) 
+colnames(df_unempl_m_full) <- df_unempl_m_full[3,]
+
 df_unempl_m_full
 ```
 
 ```{r}
-write_csv(df_unempl_m_full, "../../data/eurostat_processed/UR_M.csv", col_names = FALSE)
+write_csv(df_unempl_m_full, "../../data/eurostat_processed/UR_M.csv")
 ```
 

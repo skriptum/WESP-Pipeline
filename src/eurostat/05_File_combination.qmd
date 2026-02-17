@@ -9,35 +9,58 @@ library(tidyverse)
 
 ## Read in the processed data
 
-```{r}
+```{r message=FALSE}
 df_ANA <- read_csv("../../data/eurostat_processed/National_Accounts_A.csv")
 df_ANQ <- read_csv("../../data/eurostat_processed/National_Accounts_Q.csv")
 
 df_CPIA <- read_csv("../../data/eurostat_processed/CPI_A.csv")
-df_CPIM <- read_csv("../../data/eurostat_processed/CPI_M.csv", col_names=F)
+df_CPIM <- read_csv("../../data/eurostat_processed/CPI_M.csv")
 
 df_UR_A <- read_csv("../../data/eurostat_processed/UR_A.csv")
-df_UR_M <- read_csv("../../data/eurostat_processed/UR_M.csv", col_names=F)
+df_UR_M <- read_csv("../../data/eurostat_processed/UR_M.csv")
 ```
 
-Build the annual sheet
+**Build the annual sheet**
 ```{r}
 df_annual <- df_ANA %>%
   bind_rows(df_CPIA) %>%
   bind_rows(df_UR_A) 
 ```
 
-Build the monthly sheet
+
+**Build the monthly sheet**
+
+Sometimes, the dimensions dont add up, because one dataset already has the most recent month, while the other one doesnt
+```{r}
+if (nrow(df_CPIM) != nrow(df_UR_M)) {
+  # catch the difference in the date columns
+  intersection_dates <- intersect(df_CPIM$time, df_UR_M$time)
+  df_CPIM <- df_CPIM %>% filter(time %in% intersection_dates)
+  df_UR_M <- df_UR_M %>% filter(time %in% intersection_dates)
+}
+```
+
+
 ```{r}
 df_monthly <- df_CPIM %>%
   # merge horizontally with the UR_M table, which has the same structure
-  bind_cols(df_UR_M %>% select(-X1), .name_repair = "minimal") 
+  bind_cols(df_UR_M %>% select(-time), .name_repair = "unique") 
+```
 
-# colnames(df_monthly) <- NULL
+
+## Filter UK out
+
+Due to Brexit, UK data is messy, and has potential problems in the future.
+
+```{r}
+df_annual <- df_annual %>% filter(country_name != "United Kingdom")
+
+df_monthly <- df_monthly %>% select(-c(GBR_URX_ESTAT_M, GBR_HIC_ESTAT_M)) 
+
+df_ANQ <- df_ANQ %>% filter(country_name != "United Kingdom")
 ```
 
 ## Write to excel
-
 
 ```{r}
 source("../utils/save_timestamp.R")

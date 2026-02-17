@@ -109,10 +109,16 @@ colnames(df_cpim_body) <- colnames(df_cpim_header)
 
 ```{r}
 df_cpim_full <- rbind(df_cpim_header, df_cpim_body)
+colnames(df_cpim_full) <- df_cpim_header[3,]
+
 df_cpim_full
 ```
 
+
+
+
+
 ```{r}
-write_csv(df_cpim_full, "../../data/eurostat_processed/CPI_M.csv", col_names = FALSE)
+write_csv(df_cpim_full, "../../data/eurostat_processed/CPI_M.csv")
 ```
 
