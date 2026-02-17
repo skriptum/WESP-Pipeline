@@ -1,0 +1,110 @@
+# Comparison of GGEI data
+
+Three sources
+
+- IMF IFS
+- WB WDI
+- IMF WEO Proxy, from:
+  - GGXOFB:	General government overall fiscal balance
+  - GGXONLB	General government primary net lending/borrowing
+
+```{r}
+library(tidyverse)
+library(rsdmx)
+```
+
+
+## Data
+
+```{r}
+df_wdi_raw <- read_csv("../../data/wb_processed/wdi_indicators.csv")
+```
+
+```{r}
+df_wdi_GGEI <- df_wdi_raw %>%
+  select(year, contains("GGEI")) %>%
+  pivot_longer(cols = contains("GGEI"), names_to = "country", values_to = "GGEI") %>%
+  mutate(country = str_replace(country, "_GGEI", ""))
+
+df_wdi_GGEI
+```
+
+WEO data
+
+```{r}
+key <- "*.GGXONLB+GGXCNL.A" # all countries, Primary Net lending + net lending, Annual
+```
+
+```{r}
+df_weo_raw <- readSDMX(
+  providerId = "IMF_DATA", 
+  resource = "data", 
+  flowRef = "WEO",
+  key = key, 
+  start=1970
+  ) 
+df_weo_raw <- as.data.frame(df_weo_raw)
+```
+
+```{r}
+df_weo <- df_weo_raw %>%
+  select(COUNTRY, INDICATOR, TIME_PERIOD, OBS_VALUE) %>%
+  pivot_wider(names_from = INDICATOR, values_from = OBS_VALUE) %>%
+  mutate(
+    across(c(GGXONLB, GGXCNL), ~ as.numeric(.)),
+    GGEI_proxy = GGXONLB - GGXCNL
+  ) %>%
+  select(COUNTRY, TIME_PERIOD, GGEI_proxy) %>%
+  filter(TIME_PERIOD <= 2026)
+
+df_weo
+```
+
+```{r}
+ggplot() +
+  geom_line(
+    data = df_weo %>% filter(COUNTRY == "GBR"),
+    aes(x = as.numeric(TIME_PERIOD), y = GGEI_proxy, color="WEO Proxy"),
+  ) +
+  geom_line(
+    data = df_wdi_GGEI %>% filter(country == "GBR"),
+    aes(x = year, y = GGEI, color="WDI"),
+  ) +
+  labs(
+    title = "UK: WEO proxy vs WDI GGEI",
+    x = "Year",
+    y = "LCU"
+  ) 
+```
+
+## Comparison
+
+```{r}
+df_wesp <- readxl::read_excel("../../data/raw/Regions.xlsx")
+
+wesp_countries <- unique(df_wesp$ISO)
+```
+
+Nr of countries with more than 10 years
+```{r}
+wdi_stats <- df_wdi_GGEI %>%
+  filter(year < 2010 & year >= 2000) %>%
+  group_by(country) %>%
+  summarise(n_years_2000_2010_wdi = sum(!is.na(GGEI))) 
+
+weo_stats <- df_weo %>%
+  filter(TIME_PERIOD < 2010 & TIME_PERIOD >= 2000) %>%
+  group_by(COUNTRY) %>%
+  summarise(n_years_2000_2010_weo = sum(!is.na(GGEI_proxy)))
+
+comb_stats <- weo_stats %>%
+  left_join(wdi_stats, by = c("COUNTRY" = "country")) %>%
+  filter(COUNTRY %in% wesp_countries) 
+
+comb_stats
+```
+
+```{r}
+write_csv(comb_stats, "../../data/raw/comparison_wdi_weo.csv")
+```
+

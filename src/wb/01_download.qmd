@@ -20,7 +20,6 @@ library(WDI)
 library(tidyverse)
 ```
 
-
 ```{r}
 df_wdi_raw <- WDI(
   country = "all",
@@ -34,18 +33,28 @@ df_wdi_raw <- WDI(
     "GDP_PPP" = "NY.GDP.MKTP.PP.CD",
     "GDP_PPP_KD" = "NY.GDP.MKTP.PP.KD"
   ),
-  start = 2000,
+  start = 1970,
   extra = T
 )
 ```
 
 ## Clean
 
+Clean the dataset and only include countries in WEFM
+
+```{r}
+df_wesp <- readxl::read_excel("../../data/raw/Regions.xlsx")
+
+wesp_countries <- unique(df_wesp$ISO)
+```
+
+
 ```{r}
 df_wdi <- df_wdi_raw %>%
   filter(
     region != "Aggregates",
     # iso3c %in% c("DEU", "GBR")
+    iso3c %in% wesp_countries
     ) %>%
   select(iso3c, year, GNICAP, GINI, GGEI, YBAR, HEAD, PPP, GDP_PPP, GDP_PPP_KD) %>%
   arrange(iso3c, year) %>%
@@ -60,11 +69,9 @@ df_wdi <- df_wdi_raw %>%
 df_wdi
 ```
 
-## Save
 
-```{r}
-write_csv(df_wdi, "../../data/wb_processed/wdi_indicators.csv")
-```
+
+## Save
 
 ```{r}
 source("../utils/save_timestamp.R")
@@ -77,8 +84,6 @@ timestamp_save(
   format = "csv"
 )
 ```
-
-
 
 ## Analysis
 
