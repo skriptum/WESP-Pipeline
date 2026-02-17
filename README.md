@@ -3,7 +3,7 @@
 ## Overview
 
 - replace the outdated manual download with a more "modern" way to feed data into the **World Economic Forecasting Model** (WEFM) 
-- uses the [SDMX](https://www.sdmx.io/) API Schema to access a range of economic databases from different organisations ([IMF](https://data.imf.org/en), [OECD](https://data-explorer.oecd.org/), [OECD](https://ec.europa.eu/eurostat/data/database))
+- uses the [SDMX](https://www.sdmx.io/) API Schema to access a range of economic databases from different organisations ([IMF](https://data.imf.org/en), [World Bank](https://data.worldbank.org/) , [OECD](https://ec.europa.eu/eurostat/data/database))
 - coded in R (mostly [Quarto](https://quarto.org/) Markdown Files), with a lot of comments in the files itself
 
 
@@ -85,12 +85,12 @@ Hres a file tree with a little explanation
 ├── examples                # examples from the old WEFM
 │   ├── eurostat
 │   ├── imf
-│   └── oecd
+│   └── wb
 ├── renv                    # renv environment files
 └── src                     # source code
     ├── eurostat
     ├── imf
-    ├── oecd
+    ├── wb
     └── utils               # utility functions
 ├── README.md               # this file  
 └── renv.lock               # renv lock file
@@ -142,4 +142,17 @@ Annual GDP components are (CLV code / Curr Pr code)
 - Imports of goods and services (MTR / MTN)
 
 
+
+### World Bank
+
+| Title                                                        | WEFM Code | WDI Code          |
+| ------------------------------------------------------------ | --------- | ----------------- |
+| Interest payments (current LCU)                              | GGEI      | GC.XPN.INTP.CN    |
+| GNI per capita, Atlas method (current US$)                   | GNICAP    | NY.GNP.PCAP.CD    |
+| Gini index                                                   | GINI      | SI.POV.GINI       |
+| Survey mean consumption or income per capita, total population (2021 PPP $ per day) | YBAR      | SI.SPR.PCAP       |
+| Poverty headcount ratio at $3.00 a day (2021 PPP) (% of population) | HEAD      | SI.POV.DDAY       |
+| PPP conversion factor, GDP (LCU per international $)         |           | PA.NUS.PPP        |
+| GDP, PPP (current international $)                           |           | NY.GDP.MKTP.PP.CD |
+| GDP, PPP (constant 2021 international $)                     |           | NY.GDP.MKTP.PP.KD |
 

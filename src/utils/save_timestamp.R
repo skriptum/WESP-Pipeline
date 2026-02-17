@@ -58,6 +58,21 @@ timestamp_save <- function (df, filename, source, frequency, format) {
       status <- "Failure"
       }
       )
+  } else if (source == "WB") {
+  # WB ---------
+    tryCatch({ # Try to save the file
+      write_csv(
+        x = df, 
+        file = paste0("../../data/wb_processed/",filename,".csv")
+      )
+      print(paste0("Saved {", filename, "} from ", source, " on: ", current_time_str, " as ", format))
+      status <- "Success"
+    }, error = function(e) { # Catch any errors during saving
+      print(paste0("Error saving file: ", filename))
+      print(e)
+      status <- "Failure"
+    }
+    )
   } 
     
   # new row to add

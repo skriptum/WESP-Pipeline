@@ -1,0 +1,126 @@
+# WDI Indicator Download
+
+Required Indicators
+
+| Names                                                        | WEFM Code | WDI Code          |
+| ------------------------------------------------------------ | --------- | ----------------- |
+| Interest payments (current LCU)                              | GGEI      | GC.XPN.INTP.CN    |
+| GNI per capita, Atlas method (current US$)                   | GNICAP    | NY.GNP.PCAP.CD    |
+| Gini index                                                   | GINI      | SI.POV.GINI       |
+| Survey mean consumption or income per capita, total population (2021 PPP $ per day) | YBAR      | SI.SPR.PCAP       |
+| Poverty headcount ratio at $3.00 a day (2021 PPP) (% of population) | HEAD      | SI.POV.DDAY       |
+| PPP conversion factor, GDP (LCU per international $)         |           | PA.NUS.PPP        |
+| GDP, PPP (current international $)                           |           | NY.GDP.MKTP.PP.CD |
+| GDP, PPP (constant 2021 international $)                     |           | NY.GDP.MKTP.PP.KD |
+
+## Load
+
+```{r}
+library(WDI)
+library(tidyverse)
+```
+
+
+```{r}
+df_wdi_raw <- WDI(
+  country = "all",
+  indicator = c(
+    "GNICAP" =  "NY.GNP.PCAP.CD",
+    "GINI" = "SI.POV.GINI",
+    "GGEI" = "GC.XPN.INTP.CN",
+    "YBAR" = "SI.SPR.PCAP",
+    "HEAD" = "SI.POV.DDAY",
+    "PPP" = "PA.NUS.PPP",
+    "GDP_PPP" = "NY.GDP.MKTP.PP.CD",
+    "GDP_PPP_KD" = "NY.GDP.MKTP.PP.KD"
+  ),
+  start = 2000,
+  extra = T
+)
+```
+
+## Clean
+
+```{r}
+df_wdi <- df_wdi_raw %>%
+  filter(
+    region != "Aggregates",
+    # iso3c %in% c("DEU", "GBR")
+    ) %>%
+  select(iso3c, year, GNICAP, GINI, GGEI, YBAR, HEAD, PPP, GDP_PPP, GDP_PPP_KD) %>%
+  arrange(iso3c, year) %>%
+  pivot_wider(
+    names_from = iso3c, 
+    values_from = c(GNICAP, GINI, GGEI, YBAR, HEAD, PPP, GDP_PPP, GDP_PPP_KD), 
+    names_glue = "{iso3c}_{.value}"
+    ) %>%
+  # filter out columns with all NA values
+  select(where(~ !all(is.na(.))))
+
+df_wdi
+```
+
+## Save
+
+```{r}
+write_csv(df_wdi, "../../data/wb_processed/wdi_indicators.csv")
+```
+
+```{r}
+source("../utils/save_timestamp.R")
+
+timestamp_save(
+  df = df_wdi, 
+  filename = "wdi_indicators", 
+  source = "WB", 
+  frequency = "annual", 
+  format = "csv"
+)
+```
+
+
+
+## Analysis
+
+how many countries never had data for an indicator?
+```{r}
+df_wdi_raw %>%
+  filter(region != "Aggregates") %>%
+  rename("Indic" = GGEI) %>%
+  select(iso3c, year, Indic) %>%
+  group_by(iso3c) %>%
+  summarise(
+    n_years = sum(!is.na(Indic)),
+    .groups = "drop"
+  ) %>%
+  filter(n_years == 0) %>%
+  nrow() 
+```
+
+Comparison Table for all indicators
+```{r}
+df_wdi_stat <- df_wdi_raw %>%
+  filter(region != "Aggregates") %>%
+  pivot_longer(
+    cols = c(GNICAP, GINI, GGEI, YBAR, HEAD, PPP, GDP_PPP, GDP_PPP_KD),
+    names_to = "Indicator",
+    values_to = "Value"
+  ) %>%
+  group_by(iso3c, Indicator) %>%
+  summarise(
+    n_years = sum(!is.na(Value)),
+    min_year = min(year[!is.na(Value)], na.rm = TRUE),
+    max_year = max(year[!is.na(Value)], na.rm = TRUE),
+    value_2023 = Value[year == 2023],
+    .groups = "drop"
+  ) 
+
+df_wdi_stat %>%
+  group_by(Indicator) %>%
+  summarise(
+    n_countries_any_data = sum(n_years != 0),
+    n_countries_more_10_years = sum(n_years >= 10),
+    n_countries_2023_data = sum(!is.na(value_2023)),
+  )
+```
+
