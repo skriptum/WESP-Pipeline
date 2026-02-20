@@ -73,6 +73,12 @@ df_wdi
 
 ## Save
 
+In case you want to save it as a simple csv, instead of calling the whole timestamping process
+```{r}
+# write_csv(df_wdi, "../../data/wb_processed/wdi_indicators.csv")
+```
+
+But for production, use the timestamping function to save some metadata
 ```{r}
 source("../utils/save_timestamp.R")
 

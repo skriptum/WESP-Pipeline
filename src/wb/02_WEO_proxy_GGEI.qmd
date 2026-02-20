@@ -62,6 +62,12 @@ df_combined <- df_wdi %>%
   arrange(year)
 ```
 
+In case you just want to quickly save a csv
+```{r}
+# write_csv(df_combined, "../../data/wb_processed/wdi_indicators_with_proxy.csv")
+```
+
+But for production, use the timestamping function to save some metadata
 ```{r}
 source("../utils/save_timestamp.R")
 
