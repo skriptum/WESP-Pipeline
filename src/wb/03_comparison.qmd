@@ -1,0 +1,173 @@
+# Comparison of GGEI data
+
+Three sources
+
+- IMF IFS
+- WB WDI
+- IMF WEO Proxy, from:
+  - GGXOFB:	General government overall fiscal balance
+  - GGXONLB	General government primary net lending/borrowing
+
+```{r}
+library(tidyverse)
+```
+
+## Data
+
+### WDI
+```{r}
+df_wdi_raw <- read_csv("../../data/wb_processed/wdi_indicators.csv")
+```
+
+```{r}
+df_wdi_GGEI <- df_wdi_raw %>%
+  select(year, contains("GGEI")) %>%
+  pivot_longer(cols = contains("GGEI"), names_to = "country", values_to = "GGEI") %>%
+  mutate(country = str_replace(country, "_GGEI", ""))
+
+df_wdi_GGEI
+```
+
+### WEO data
+
+```{r}
+df_weo_raw <- read_csv("../../data/wb_processed/wdi_indicators_with_proxy.csv")
+```
+
+```{r}
+df_weo <- df_weo_raw %>%
+  select(year, contains("WEO_proxy")) %>%
+  pivot_longer(cols = contains("WEO_proxy"), names_to = "country", values_to = "GGEI_proxy") %>%
+  mutate(country = str_replace(country, "_WEO_proxy", ""))
+```
+
+### IMF old data:
+```{r}
+df_old_adv <- read_csv("../../examples/imf/adv_annual.csv")
+df_old_dev <- read_csv("../../examples/imf/developing_annual.csv")
+df_old_oth <- read_csv("../../examples/imf/other_annual.csv")
+
+imf_CONV <- readxl::read_excel("../../data/raw/imf_CONV.xlsx") 
+```
+
+```{r}
+df_old_comb <- tibble()
+for (df in list(df_old_adv, df_old_dev, df_old_oth)) {
+  df <- df %>%
+    select(`Country Name`, `Country Code`, `Indicator Name`, `Indicator Code`, Attribute, `1960`:`2024`) %>%
+    mutate(across(`1960`:`2024`, as.numeric))
+  df_old_comb <- bind_rows(df_old_comb, df) 
+}
+rm(df_old_adv, df_old_dev, df_old_oth)
+```
+
+```{r}
+df_old <- df_old_comb %>%
+  filter(`Indicator Code` == "GG_GEI_G01_XDC") %>%
+  mutate(
+    `Country Code` = as.character(`Country Code`),
+    ) %>%
+  left_join(imf_CONV, by = c("Country Code" = "Code")) %>%
+  select(ISO, `1960`:`2024`) %>%
+  pivot_longer(cols = `1960`:`2024`, names_to = "year", values_to = "IFS_GGEI") %>%
+  mutate(year = as.numeric(year))
+```
+
+
+
+## Combine
+
+```{r}
+df_wesp <- readxl::read_excel("../../data/raw/Regions.xlsx")
+
+wesp_countries <- unique(df_wesp$ISO)
+```
+
+```{r}
+df_comb <- df_weo %>%
+  filter(year >= 2000) %>%
+  left_join(df_wdi_GGEI %>% filter(year >= 2000), by = c("country", "year")) %>%
+  left_join(df_old %>% filter(year >= 2000), by = c("country" = "ISO", "year")) %>%
+  filter(country %in% wesp_countries)
+```
+
+## Comparison
+
+Messy code, but it creates some comparison tables for
+- number of countries with any data
+- number of countries with more than 10 years of data
+- number of countries with full data between 2000 and 2010 (WEFM training period)
+
+```{r}
+df_any_data <- df_comb %>%
+  group_by(country) %>%
+  reframe(
+    n_years_weo = sum(!is.na(GGEI_proxy)),
+    n_years_wdi = sum(!is.na(GGEI)),
+    n_years_ifs = sum(!is.na(IFS_GGEI))
+  ) %>%
+  summarise(
+    stat = "Nr of countries with any data",
+    weo = sum(n_years_weo > 0),
+    wdi = sum(n_years_wdi > 0),
+    ifs = sum(n_years_ifs > 0)
+  ) 
+
+df_more_than10 <- df_comb %>%
+  group_by(country) %>%
+  reframe(
+    n_years_weo = sum(!is.na(GGEI_proxy)),
+    n_years_wdi = sum(!is.na(GGEI)),
+    n_years_ifs = sum(!is.na(IFS_GGEI))
+  ) %>%
+  summarise(
+    stat = "Nr of countries with more than 10 years of data",
+    weo = sum(n_years_weo > 10),
+    wdi = sum(n_years_wdi > 10),
+    ifs = sum(n_years_ifs > 10)
+  )
+
+df_2000_2010 <- df_comb %>%
+  filter(year >= 2000, year <= 2010) %>%
+  group_by(country) %>%
+  reframe(
+    n_years_weo = sum(!is.na(GGEI_proxy)),
+    n_years_wdi = sum(!is.na(GGEI)),
+    n_years_ifs = sum(!is.na(IFS_GGEI))
+  ) %>%
+  summarise(
+    stat = "Nr of countries with full data between 2000 and 2010",
+    weo = sum(n_years_weo > 10),
+    wdi = sum(n_years_wdi > 10),
+    ifs = sum(n_years_ifs > 10)
+  )
+
+bind_rows(df_any_data, df_more_than10, df_2000_2010)
+```
+
+Correlation matrix
+```{r}
+df_comb %>%
+  select(GGEI_proxy, GGEI, IFS_GGEI) %>%
+  rename(
+    WEO = GGEI_proxy,
+    WDI = GGEI,
+    IFS = IFS_GGEI
+  ) %>%
+  cor(use = "pairwise.complete.obs")
+```
+
+Plot for one country
+```{r}
+df_comb %>%
+  filter(country == "GBR") %>%
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = GGEI_proxy, color = "WEO Proxy")) +
+  geom_line(aes(y = GGEI, color = "WDI GGEI")) +
+  geom_line(aes(y = IFS_GGEI, color = "IMF IFS GGEI")) +
+  facet_wrap(~ country) + # in case I want to do this for multiple countries
+  labs(title = "Comparison of GGEI from WEO Proxy, WDI, and IMF IFS",
+       x = "Year",
+       y = "Value",
+       color = "Data Source") 
+```

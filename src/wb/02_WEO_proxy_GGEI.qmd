@@ -1,0 +1,76 @@
+# WEO Proxy Calculation
+
+Finding an alternative indicator for Interest Payments (GGEI), due to limited
+availability in WB WDI.
+
+```{r}
+library(rsdmx)
+library(tidyverse)
+```
+
+
+## Fetch
+
+```{r}
+key <- "*.GGXONLB+GGXCNL.A" # all countries, Primary Net lending + net lending, Annual
+```
+
+```{r}
+df_weo_raw <- readSDMX(
+  providerId = "IMF_DATA", 
+  resource = "data", 
+  flowRef = "WEO",
+  key = key, 
+  start=1970
+  ) 
+df_weo_raw <- as.data.frame(df_weo_raw)
+```
+
+```{r}
+df_weo <- df_weo_raw %>%
+  select(COUNTRY, INDICATOR, TIME_PERIOD, OBS_VALUE) %>%
+  pivot_wider(names_from = INDICATOR, values_from = OBS_VALUE) %>%
+  mutate(
+    across(c(GGXONLB, GGXCNL), ~ as.numeric(.)),
+    GGEI_proxy = GGXONLB - GGXCNL,
+    TIME_PERIOD = as.numeric(TIME_PERIOD)
+  ) %>%
+  select(COUNTRY, TIME_PERIOD, GGEI_proxy) %>%
+  filter(TIME_PERIOD <= 2026)
+
+df_weo
+```
+
+Format is as is required by the WEFM
+
+```{r}
+df_weo_formatted <- df_weo %>%
+  pivot_wider(names_from=COUNTRY, values_from=GGEI_proxy, names_glue="{COUNTRY}_WEO_proxy") 
+```
+
+## Save
+
+Combine with the WDI indicators and save
+
+```{r}
+df_wdi <- read_csv("../../data/wb_processed/wdi_indicators.csv")
+```
+
+```{r}
+df_combined <- df_wdi %>%
+  left_join(df_weo_formatted, by = c("year" = "TIME_PERIOD")  ) %>%
+  arrange(year)
+```
+
+```{r}
+source("../utils/save_timestamp.R")
+
+timestamp_save(
+  df = df_combined, 
+  filename = "wdi_indicators_with_proxy", 
+  source = "WB", 
+  frequency = "annual", 
+  format = "csv"
+)
+```
+
