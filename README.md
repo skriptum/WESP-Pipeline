@@ -77,9 +77,9 @@ Hres a file tree with a little explanation
 
 ```
 ├── data                    # data 
-│   ├── eurostat_processed  # processed eurostat data
+│   ├── eurostat_processed  # processed data sets (here eurostat)
 │   ├── imf_processed        
-│   ├── oecd_processed
+│   ├── wb_processed
 │   └── raw                 # raw data files used as inputs
 ├── docs
 ├── examples                # examples from the old WEFM
@@ -123,7 +123,9 @@ Annual Data
 
 ### Eurostat
 
-| Indicators               | Unit                                                         | Adjustment                                | Eurostat Dataset (LINKS ARE WITH PRESELECTION!)              | Code                          |
+The Links in the table already have the required preselection!
+
+| Indicators               | Unit                                                         | Adjustment                                | Eurostat Dataset ID                                          | Code                          |
 | ------------------------ | ------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------ | ----------------------------- |
 | Annual GDP components    | Chain Linked Volums (2010); Current Prices (millions of nat. curr) | None                                      | [NAMA_10_GDP](https://ec.europa.eu/eurostat/databrowser/view/NAMA_10_GDP__custom_15679333/default/table?lang=en) | {ISO}\_{CODE}\_{ADJ}\_ESTAT_Q |
 | Quarterly GDP Components | Chain Linked Volums (2010); Current Prices (millions of nat. curr) | unadjusted; Seasonal; Seasonal + Calendar | [NAMQ_10_GDP](https://ec.europa.eu/eurostat/databrowser/view/namq_10_gdp__custom_20133126/default/table) | {ISO}\_{CODE}\_{ADJ}\_ESTAT_Q |
@@ -145,9 +147,9 @@ Annual GDP components are (CLV code / Curr Pr code)
 
 ### World Bank
 
-Indicators taken from the World Bank [WDI Viewer](https://data.worldbank.org/indicator?tab=all)
+Indicators taken from the World Bank [WDIs](https://data.worldbank.org/indicator?tab=all)
 
-| Title                                                        | WEFM Code | WDI Code          |
+| Description                                                  | WEFM Code | WDI Code          |
 | ------------------------------------------------------------ | --------- | ----------------- |
 | Interest payments (current LCU)                              | GGEI      | GC.XPN.INTP.CN    |
 | GNI per capita, Atlas method (current US$)                   | GNICAP    | NY.GNP.PCAP.CD    |
