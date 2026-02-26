@@ -208,16 +208,14 @@ df_CA <- dataset_CA %>%
 - WESP Code: FMB_XDC / *BMS_M2$
 - WESP Desc: Monetary, M2, Domestic Currency
 - IMF Database: [Monetary and Financial Statistics: Monetary Aggregates](https://data.imf.org/en/datasets/IMF.STA:MFS_MA)
-- IMF Code: BM_MAI; XDC
-- IMF Desc: Broad Money
-
-NOTE: Check that broad money = M2 in the definitions
+- IMF Code: NDMBM_MAI; XDC
+- IMF Desc: National Definitions of Money, Base Money
 
 ```{r}
 flowref <- 'MFS_MA'
 
 COUNTRIES <- "*"
-INDICATOR <- "BM_MAI"
+INDICATOR <- "NDMBM_MAI"
 CURRENCY <- "XDC"
 FREQUENCY <- "A"
 
@@ -307,7 +305,7 @@ df_IE <- dataset_IE %>%
       SECTOR == "S1311B" ~ "Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency"
     ),
     `Indicator Code` = case_when(
-      SECTOR == "S13" ~ "GG_GEI_G01_XDC",
+      SECTOR == "S13" ~ "GG_GEI_G01_XDC_OLD",
       SECTOR == "S1311B" ~ "BCG_GEI_G01_XDC"
     ),
     `Attribute` = "Value",
@@ -322,6 +320,62 @@ df_IE <- dataset_IE %>%
   filter(!is.na(`Indicator Code`))
 ```
 
+## Interest Expense (Proxy)
+
+Because of a very limited data availability of the original Interest Expense Indicator, we create a Proxy for it by substracting the fiscal balance from the primary balance. 
+
+- IMF Database: World Economic Outlook [WEO](https://data.imf.org/en/datasets/IMF.RES:WEO)
+- IMF Code: GGXONLB - GGXCNL
+- IMF Desc: 
+  - Primary net lending (+) / net borrowing (-), General government, Domestic Currency
+  - Net lending (+) / net borrowing (-), General government, Domestic Currency
+
+```{r}
+key <- "*.GGXONLB+GGXCNL.A" # all countries, Primary Net lending + net lending, Annual
+```
+
+```{r}
+dataset_WEO <- readSDMX(
+  providerId = "IMF_DATA", 
+  resource = "data", 
+  flowRef = "WEO",
+  key = key, 
+  start=1970
+  ) 
+dataset_WEO <- as.data.frame(dataset_WEO)
+```
+
+```{r}
+df_WEO <- dataset_WEO %>%
+  select(COUNTRY, INDICATOR, TIME_PERIOD, OBS_VALUE) %>%
+  pivot_wider(names_from = INDICATOR, values_from = OBS_VALUE) %>%
+  mutate(
+    across(c(GGXONLB, GGXCNL), ~ as.numeric(.)),
+    GG_GEI_G01_XDC = GGXONLB - GGXCNL,
+    TIME_PERIOD = as.numeric(TIME_PERIOD)
+  ) %>%
+  select(COUNTRY, TIME_PERIOD, GG_GEI_G01_XDC) %>%
+  right_join(imf_CONV, by = c("COUNTRY" = "ISO")) %>%
+  reframe(
+    `Country Name` = Name,
+    `Country Code` = Code,
+    `Indicator Name` = "Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency",
+    `Indicator Code` = "GG_GEI_G01_XDC",
+    `Attribute` = "Value",
+    TIME_PERIOD,
+    OBS_VALUE = GG_GEI_G01_XDC
+  ) %>%
+  arrange(TIME_PERIOD) %>%
+  pivot_wider(
+    names_from = TIME_PERIOD,
+    values_from = OBS_VALUE
+  ) %>%
+  select(-`NA`)
+
+df_WEO
+```
+
+
 ## Combine and Save
 
 ```{r}
@@ -330,9 +384,18 @@ df_imf_annual <- bind_rows(
   df_CPI,
   df_CA,
   df_M2,
-  df_IE
+  df_IE,
+  df_WEO
 )
 ```
+
+Filter out rows with all NA values (they break the EViews Model)
+```{r}
+df_imf_annual <- df_imf_annual %>%
+  filter(if_any(-c(`Country Name`, `Country Code`, `Indicator Name`, `Indicator Code`, `Attribute`), ~ !is.na(.)))
+df_imf_annual
+```
+
 
 ```{r}
 source("../../src/utils/imf_split.R")
