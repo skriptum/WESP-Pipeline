@@ -57,15 +57,9 @@ R <--calls--> a --timestamp--> 4[last_successful_run.csv]
 install.packages("renv") # install renv if you don't have it yet renv::restore() # restore the environment
 ```
 
-2. After that, run the respective quarto files in the folder `src/` 
-   (e.g `src/imf/03_annual_data.qmd` for annual IMF data). Each of these files is independent and can be run separately.
-   - Either open the files in RStudio and run them from there (easier)
-     - Make sure to use the option in the top right **Run -> Restart R and run all Chunks** to have a clean slate in each run
-   - Alternatively, run the whole file via the command line:
-   ```
-   quarto render src/imf/03_annual_data.qmd
-   ```
-   - *In the long run, this could be automated using a Makefile or similar, but for now, this is sufficient.*
+2. After that, run the respective quarto files. Each of these files is independent and can be run separately.
+   - To run the complete pipeline at once, use `run-pipeline.qmd` (easiest)
+   - Alternatively, open each file directly and press "Restart R and run all chunks". This is useful in case you want to inspect the code again or there was an error using the first approach
 
 3. Check in the `last_successful_run.csv` file to see when the last run was for each data source.
 
@@ -77,26 +71,26 @@ Hres a file tree with a little explanation
 
 ```
 ├── data                    # data 
-│   ├── eurostat_processed  # processed data sets (here eurostat)
-│   ├── imf_processed        
-│   ├── wb_processed
-│   └── raw                 # raw data files used as inputs
+│   ├── eurostat_processed  # processed data sets (here eurostat)
+│   ├── imf_processed        
+│   ├── wb_processed
+│   └── raw                 # raw data files used as inputs
 ├── docs
 ├── examples                # examples from the old WEFM
-│   ├── eurostat
-│   ├── imf
-│   └── wb
+│   ├── eurostat
+│   ├── imf
+│   └── wb
 ├── renv                    # renv environment files
 └── src                     # source code
     ├── eurostat
     ├── imf
     ├── wb
     └── utils               # utility functions
-├── README.md               # this file  
+├── last_successful_run.md  # timestamp for last successful run of the pipeline
+├── README.md               # this file 
+├── run-pipeline.qmd        # code file to run the whole pipeline at once
 └── renv.lock               # renv lock file
 ```
-
-
 
 ## Data Sources
 
@@ -104,22 +98,34 @@ Hres a file tree with a little explanation
 
 Monthly Data:
 
-| IMF-Dataset | IMF Code          | WEFM Code   | WEFM Description                                             |
-| ----------- | ----------------- | ----------- | ------------------------------------------------------------ |
-| ER          | XDC_USD; PA_RT    | *_rfx_ncdol | Exchange rates, domestic currency per usd, period average, rate |
-| MFS_IR      | MFS166_RT_PT_A_PT | *_rird      | Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum |
+| IMF-Dataset | IMF Code          | WEFM Code                       | WEFM Description                                             |
+| ----------- | ----------------- | ------------------------------- | ------------------------------------------------------------ |
+| ER          | XDC_USD; PA_RT    | ENDA_XDC_USD_RATE / *_rfx_ncdol | Exchange rates, domestic currency per usd, period average, rate |
+| MFS_IR      | MFS166_RT_PT_A_PT | FPOLM_PA / *_rird               | Financial, Interest Rates, Monetary Policy-Related Interest Rate, Percent per annum |
 
 Annual Data
 
-| IMF Dataset | IMF Code               | WEFM Code        | WEFM Description                                             |
-| ----------- | ---------------------- | ---------------- | ------------------------------------------------------------ |
-| ER          | XDC_USD, PA_RT         | *_rft_ncdol      | Exchange rates, domestic currency per usd, period average, rate |
-| CPI         | CPI; _T; IX            | *PCPI            | Prices, Consumer Price Index, All items, Index               |
-| CPI         | CPI; _T;YOY_PCH_PA_PT; | *PCP_GR          | Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent |
-| WEO         | BCA                    | *BCANET$         | Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars |
-| MFS_MA      | BM_MAI                 | *mnm2            | Monetary, M2, Domestic Currency                              |
-| QGFS        | G24_T_XDC; S13         | *gg_gei_g01_xdc  | Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency |
-| QGFS        | G24_T_XDC; S1311B      | *bcg_gei_g01_xdc | Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency |
+| IMF Dataset | IMF Code               | WEFM Code                            | WEFM Description                                             |
+| ----------- | ---------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| ER          | XDC_USD, PA_RT         | ENDA_XDC_USD_RATE /*_rft_ncdol       | Exchange rates, domestic currency per usd, period average, rate |
+| CPI         | CPI; _T; IX            | PCPI_IX / *PCPI                      | Prices, Consumer Price Index, All items, Index               |
+| CPI         | CPI; _T;YOY_PCH_PA_PT; | PCPI_PC_CP_A_PT / *PCPI_GR           | Prices, Consumer Price Index, All items, Percentage change, Corresponding period previous year, Percent |
+| WEO         | BCA                    | BCAXF_BP6_USD / *BCANET$             | Supplementary Items, Current Account, Net (Excluding Exceptional Financing), US Dollars |
+| MFS_MA      | NDMBM_MAI              | FMB_XDC / *mnm2                      | National Definitions of Money, Base Money                    |
+| WEO         | GGXONLB - GGXCNL       | GG_GEI_G01_XDC                       | Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency |
+| QGFS        | G24_T_XDC; S13         | GG_GEI_G01_XDC_OLD / *gg_gei_g01_xdc | Fiscal, General Government, Expense, Interest, 2001 Manual, Domestic Currency (OLD) |
+| QGFS        | G24_T_XDC; S1311B      | BCG_GEI_G01_XDC / *bcg_gei_g01_xdc   | Fiscal, Budgetary Central Government, Expense, Interest, 2001 Manual, Domestic Currency |
+
+There are 2 different Indicators for General Government Interest Expense
+
+- From the Quarterly Government Financial Statistics. This is the "official" IMF one, which is only available for ca 60 countries and a limited range of years
+- one calculated from the WEO. It uses Government Balance data to calculate Interest Expense and lines up with the values from WB WDI, but with a larger coverage of countries
+- both are still in the dataset, in case there is a decision to use the QGFS instead of WEO where available
+
+The data sources used in the Calculation (from [WEO](https://data.imf.org/en/datasets/IMF.RES:WEO)):
+
+- GGXONLB: Primary net lending (+) / net borrowing (-), General government, Domestic Currency
+- GGXCNL: Net lending (+) / net borrowing (-), General government, Domestic Currency
 
 ### Eurostat
 
@@ -134,7 +140,7 @@ The Links in the table already have the required preselection!
 | Annual HICP              | All-items HICP, Annual Average                               | None                                      | [PRC_HICP_AIND](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_aind__custom_15679491/default/table?lang=en) | {ISO}_HIC_ESTAT               |
 | Monthly HICP             | All-items HICP, 2015=100                                     | None                                      | [PRC_HICP_MIDX](https://ec.europa.eu/eurostat/databrowser/view/prc_hicp_midx__custom_15679516/default/table?lang=en) | {ISO}_HIC_ESTAT_M             |
 
-Annual GDP components are (CLV code / Curr Pr code)
+Annual GDP components are (Chain Linked Value code / Current Prices code)
 
 - Gross domestic product at market prices (YER / YCN)
 - Final consumption expenditure of general government (GCR / GCN)
