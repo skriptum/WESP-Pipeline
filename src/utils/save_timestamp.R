@@ -2,6 +2,7 @@
 
 library(writexl)
 library(lubridate)
+library(tidyverse, quietly=T)
 
 
 timestamp_save <- function (df, filename, source, frequency, format) {
@@ -73,6 +74,9 @@ timestamp_save <- function (df, filename, source, frequency, format) {
       status <- "Failure"
     }
     )
+  } else {
+    stop(paste0("Unsupported source: ", source))
+    status <- "Failure"
   } 
     
   # new row to add
@@ -90,7 +94,6 @@ timestamp_save <- function (df, filename, source, frequency, format) {
   df <- filter(df, filename != !!filename) # Remove old entry for this file
   df <- bind_rows(df, entry)
   write_csv(df, log_file)
-    
   
 }
 

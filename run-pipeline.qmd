@@ -1,0 +1,73 @@
+# Run the whole pipeline
+
+> One File to rule them all, 
+> 
+> One File to find them (in online databases),
+> 
+> One File to bring them all (into R), 
+> 
+> and in the darkness bind them (into a cleaned csv)
+> - J.R.R. Tolkien (probably)
+
+This file will run the entire pipeline, for all sources. Comment out / don't run blocks if you don't need them.
+
+Please check the `last_successful_run.md` file after running this, to see if all files were successfully created and saved (make sure to take a look at the Status column in the Table).
+
+All in all, this code should not take much longer than 5 minutes
+
+## Utilities
+
+```{r}
+library(quarto)
+```
+
+Dedicated Runner to catch errors and clean up afterwards (quarto creates a lot of unneeded files running a QMD file)
+```{r}
+my_quarto_render <- function(source, file_name) {
+  tryCatch({ # Try to run the code
+    print(paste0("Running: ", file_name))
+    # run the code
+    quarto_render(
+      input = paste0("./src/", source,"/",file_name, ".qmd"),
+      output_file = "NULL",
+      quiet = T
+    )
+    # remove the output file 
+    unlink(paste0("./src/", source,"/", "NULL.html"))
+    # remove the associated folder
+    unlink(paste0("./src/", source,"/", file_name, "_files"), recursive = TRUE, force = TRUE)
+  }, error = function(e) { # Catch any errors during running
+    print(paste0("ERROR: the code did not run, take a look at the file and fix it from there"))
+  }
+  )
+}
+```
+
+## IMF
+
+```{r}
+my_quarto_render("imf", "02_monthly_data")
+my_quarto_render("imf", "03_annual_data")
+```
+
+## World Bank
+
+```{r}
+my_quarto_render("wb", "01_wdi_download")
+my_quarto_render("wb", "02_WEO_proxy_GGEI")
+```
+
+## Eurostat
+
+Note: Make sure to run all of them at once, so that the combined outputted file is up-to-date! 
+```{r}
+my_quarto_render("eurostat", "02_national_accounts") # National Accounts
+my_quarto_render("eurostat", "03_CPI") # Consumer Price Index
+my_quarto_render("eurostat", "04_Unempl") # Unemployment
+
+my_quarto_render("eurostat", "05_File_combination") # Combine the files and save as one file with multiple sheets
+```
+
+## Le fin
+
+Hopefully it all worked. If not, get into the weeds and take a look at the individual files to see where the error is. Youll probably have to adjust some links, because there was an internal update in the databases or similar.
