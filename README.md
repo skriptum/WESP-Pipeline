@@ -1,18 +1,30 @@
 # WESP Data Pipeline
 
-## Overview
-
 - replace the outdated manual download with a more "modern" way to feed data into the **World Economic Forecasting Model** (WEFM) 
 - uses the [SDMX](https://www.sdmx.io/) API Schema to access a range of economic databases from different organisations ([IMF](https://data.imf.org/en), [World Bank](https://data.worldbank.org/) , [OECD](https://ec.europa.eu/eurostat/data/database))
-- coded in R (mostly [Quarto](https://quarto.org/) Markdown Files), with a lot of comments in the files itself
+- coded in R (mostly [Quarto](https://quarto.org/) Markdown Files), with a lot of comments in the files itself to explain whats happening
+
+
+
+**Table of Contents:**
+
+* [Workflow](#workflow)
+* [Step-by-Step Instructions](#step-by-step-instructions)
+* [Project Structure](#project-structure)
+* [Data Sources](#data-sources)
+  + [IMF](#imf)
+  + [Eurostat](#eurostat)
+  + [World Bank](#world-bank)
 
 
 
 ## Workflow
 
-The basic intution behind the pipeline is like this: take some Databases, clean them, take some additional files to format them to the WEFM expecations, and then output some excel files to be ingested into Eviews.
+The basic intuition behind the pipeline is as follows: take some databases, clean them, and take some additional files to format them to the WEFM expecations. Then, output Excel files to be ingested into EViews.
 
-Here is an example for the IMF annual data:
+
+
+Here is an example for IMF annual data:
 
 ```mermaid
 graph LR
@@ -42,26 +54,34 @@ R <--calls--> a --timestamp--> 4[last_successful_run.csv]
 ```
 
 1. access some IMF databases (e.g for Interest Rates or Balance of Payments) via the SDMX API
-2. clean and transform it using the *tidyverse* packages
+2. clean and transform the data using the *tidyverse* packages
 3. add the relevant country codes for WEFM from `imf_CONV.xlsx`
 4. split it into the country groupings using the utility script `imf_split.qmd`
 5. save the excel files into the `data/imf_processed` folder
-6. update the timestamp for last accessed in the `last_successful_run.csv` 
+6. update the timestamp in `last_successful_run.csv` 
 
+Note: The final output data files are overwritten with each run. That's why there is a timestamp file, so you can see when they were last edited. If you open and edit the files in Excel, be sure to copy them to a different location; otherwise, your edits will be lost. 
 
+## Step-by-Step Instructions
 
-## Usage
+1. Go to the GitHub Code Repository (https://github.com/skriptum/WESP-Pipeline) and click on "Code > Download ZIP" to download the complete code
+2. Unzip the Folder, move it to an appropriate location and open the `WESP_Pipeline.Rproj` file in RStudio
+3. To recreate the environment, I used [renv](https://rstudio.github.io/renv/articles/renv.html) to keep track of the packages used. You need to restore the packages on my computer to make the project run on yours.
 
-1. To get started with the project, you have to use `renv`, which is used to keep the package versions synced and up to date.
-```
-install.packages("renv") # install renv if you don't have it yet renv::restore() # restore the environment
-```
+   - ```
+          install.packages("renv") # install renv if you don't have it yet 
+          renv::restore() # restore the environment
+      ```
+   - This could take some time, as downloading and extracting all packages takes some time
+   - If it doesnt work, you need to go into each code file and download the packages that are required
 
-2. After that, run the respective quarto files. Each of these files is independent and can be run separately.
-   - To run the complete pipeline at once, use `run-pipeline.qmd` (easiest)
-   - Alternatively, open each file directly and press "Restart R and run all chunks". This is useful in case you want to inspect the code again or there was an error using the first approach
+4. Now, youre ready to run the code. The easiest way is to run the "Master" File `run-pipeline.qmd`. This file runs the process for all sources (IMF, WB, EUROSTAT), downloading and processing the data and places the finished files in the `./data/` folder
 
-3. Check in the `last_successful_run.csv` file to see when the last run was for each data source.
+5. Now, you should check that everything smoothly. Go into `last-successful-run.csv` and take a look at the table. 
+
+   - You should see the name of respective files, as well as their last update time and a "Success" in the status column
+   - If that is not the case, go into the respective individual files to run them independently and see where they are failing
+
 
 *Feel free to go into each Quarto Code file and look at it before running it, there are a some more comments in there too to explain how it works*
 
@@ -86,11 +106,13 @@ Hres a file tree with a little explanation
     ├── imf
     ├── wb
     └── utils               # utility functions
-├── last_successful_run.md  # timestamp for last successful run of the pipeline
+├── last_successful_run.csv # timestamp for last successful run of the pipeline
 ├── README.md               # this file 
 ├── run-pipeline.qmd        # code file to run the whole pipeline at once
 └── renv.lock               # renv lock file
 ```
+
+
 
 ## Data Sources
 

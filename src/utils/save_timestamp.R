@@ -7,7 +7,6 @@ library(tidyverse, quietly=T)
 
 timestamp_save <- function (df, filename, source, frequency, format) {
   log_file <- "../../last_successful_run.csv"
-  current_commit <- substr( system("git rev-parse HEAD", intern = TRUE), 0,7)
   
   # Generate timestamped filename
   current_time <- now(tzone = "America/New_York")
@@ -86,7 +85,6 @@ timestamp_save <- function (df, filename, source, frequency, format) {
     frequency = frequency,
     format = format,
     last_run = current_time_str,
-    code_version = current_commit,
     status = status
   )
   # read log file
