@@ -65,7 +65,9 @@ Note: The final output data files are overwritten with each run. That's why ther
 ## Step-by-Step Instructions
 
 1. Go to the GitHub Code Repository (https://github.com/skriptum/WESP-Pipeline) and click on "Code > Download ZIP" to download the complete code
+
 2. Unzip the Folder, move it to an appropriate location and open the `WESP_Pipeline.Rproj` file in RStudio
+
 3. To recreate the environment, I used [renv](https://rstudio.github.io/renv/articles/renv.html) to keep track of the packages used. You need to restore the packages on my computer to make the project run on yours.
 
    - ```
@@ -75,13 +77,14 @@ Note: The final output data files are overwritten with each run. That's why ther
    - This could take some time, as downloading and extracting all packages takes some time
    - If it doesnt work, you need to go into each code file and download the packages that are required
 
-4. Now, youre ready to run the code. The easiest way is to run the "Master" File `run-pipeline.qmd`. This file runs the process for all sources (IMF, WB, EUROSTAT), downloading and processing the data and places the finished files in the `./data/` folder
+4. Some workflows use the typical WEFM `Regions.xlsx` file. Replace it in `/data/raw` in case there are updates to country classifications / names etc.
 
-5. Now, you should check that everything smoothly. Go into `last-successful-run.csv` and take a look at the table. 
+5. Now, youre ready to run the code. The easiest way is to run the "Master" File `run-pipeline.qmd`. This file runs the process for all sources (IMF, WB, EUROSTAT), downloading and processing the data and places the finished files in the `./data/` folder
+
+6. Now, you should check that everything smoothly. Go into `last-successful-run.csv` and take a look at the table. 
 
    - You should see the name of respective files, as well as their last update time and a "Success" in the status column
    - If that is not the case, go into the respective individual files to run them independently and see where they are failing
-
 
 *Feel free to go into each Quarto Code file and look at it before running it, there are a some more comments in there too to explain how it works*
 
@@ -91,7 +94,7 @@ Hres a file tree with a little explanation
 
 ```
 ├── data                    # data 
-│   ├── eurostat_processed  # processed data sets (here eurostat)
+│   ├── eurostat_processed  # processed (final) data sets 
 │   ├── imf_processed        
 │   ├── wb_processed
 │   └── raw                 # raw data files used as inputs
@@ -101,11 +104,26 @@ Hres a file tree with a little explanation
 │   ├── imf
 │   └── wb
 ├── renv                    # renv environment files
-└── src                     # source code
-    ├── eurostat
-    ├── imf
-    ├── wb
-    └── utils               # utility functions
+├── src                     # source code
+│   ├── eurostat
+│   │	  ├── 01_examples.qmd          # ignore, just exploring the examples 
+│   │   ├── 02_national_accounts.qmd # annual and quarterly NA data
+│   │   ├── 03_CPI.qmd               # Annual and monthly CPI
+│   │   ├── 04_Unempl.qmd            # Annual and monthly Unemployment Rates
+│   │   └── 05_File_combination.qmd  # File that builds the final xlsx file
+│   ├── imf
+│   │   ├── 01_example_exploration.qmd
+│   │   ├── 02_monthly_data.qmd      # Exchange + Interest Rates
+│   │   ├── 03_annual_data.qmd       # CPI, Current Account, ...
+│   │   ├── 04_monthly_check.qmd     # checking overlap with old IFS
+│   │   └── 05_statistics.qmd
+│   ├── utils
+│   │   ├── imf_split.R              # for IMF: split into advanced, developing
+│   │   └── save_timestamp.R         # utility to timestamp the saving process
+│   └── wb
+│       ├── 01_wdi_download.qmd      # Poverty, PPP, Gini, ...
+│       ├── 02_WEO_proxy_GGEI.qmd    # Interest rate proxy
+│       └── 03_comparison.qmd        # of different Interest rate datasets
 ├── last_successful_run.csv # timestamp for last successful run of the pipeline
 ├── README.md               # this file 
 ├── run-pipeline.qmd        # code file to run the whole pipeline at once
