@@ -2,6 +2,8 @@
 
 A reproducible pipeline for acquiring, cleaning, and structuring macroeconomic data for the United Nations World Economic Forecasting Model (WEFM)
 
+<!-- **PDF Version: 06.03.2026** COMMENT OUT FOR PDF PRINTING -->
+
 
 
 **Overview**
@@ -72,7 +74,6 @@ R <--calls--> a --timestamp--> 4[last_successful_run.csv]
 6. update the timestamp in `last_successful_run.csv` 
 
 Note: The final output data files are overwritten with each run. That's why there is a timestamp file, so you can see when they were last edited. If you open and edit the files in Excel, be sure to copy them to a different location; otherwise, your edits will be lost. 
-
 
 ## Step-by-Step Instructions
 
@@ -209,10 +210,6 @@ Annual GDP components are (Chain Linked Value code / Current Prices code)
 - Gross fixed capital formation (ITR / ITN)
 - Exports of goods and services (XTR / XTN)
 - Imports of goods and services (MTR / MTN)
-
-
-
-
 
 ### World Bank
 
