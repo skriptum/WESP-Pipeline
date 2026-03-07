@@ -2,16 +2,32 @@
 
 A reproducible pipeline for acquiring, cleaning, and structuring macroeconomic data for the United Nations World Economic Forecasting Model (WEFM)
 
+
+
+**Overview**
+
 - replaces manual data downloads from websites with a reproducible automated workflow
 - retrieves data via the [SDMX](https://www.sdmx.io/) API standard from international statistical providers ([IMF](https://data.imf.org/en), [World Bank](https://data.worldbank.org/), [Eurostat](https://ec.europa.eu/eurostat/data/database))
 - implemented in R using [Quarto](https://quarto.org/) documents, with extensive in-line documentation
 
-About: 
+
+
+**Project Information:** 
 
 - GitHub Repository (online Codesharing Platform): [Link](https://github.com/skriptum/WESP-Pipeline/tree/main)
 - Maintainer: Marten W. - Global Economic Monitoring Branch (UN DESA)
 
 
+
+**Table of Contents:**
+
+* [Workflow](#workflow)
+* [Step-by-Step Instructions](#step-by-step-instructions)
+* [Project Structure](#project-structure)
+* [Data Sources](#data-sources)
+  + [IMF](#imf)
+  + [Eurostat](#eurostat)
+  + [World Bank](#world-bank)
 
 ## Workflow
 
@@ -57,6 +73,7 @@ R <--calls--> a --timestamp--> 4[last_successful_run.csv]
 
 Note: The final output data files are overwritten with each run. That's why there is a timestamp file, so you can see when they were last edited. If you open and edit the files in Excel, be sure to copy them to a different location; otherwise, your edits will be lost. 
 
+
 ## Step-by-Step Instructions
 
 Requirements:
@@ -91,6 +108,7 @@ All package dependencies are managed through `renv`.
    - If that is not the case, go into the respective individual files to run them independently and see where they are failing
 
 *Feel free to go into each Quarto Code file and look at it before running it, there are a some more comments in there too to explain how it works*
+
 
 ## Project Structure
 
@@ -133,7 +151,6 @@ Below is a simplified overview of the repository structure:
 ├── run-pipeline.qmd        # code file to run the whole pipeline at once
 └── renv.lock               # renv lock file
 ```
-
 
 
 ## Data Sources
@@ -192,6 +209,8 @@ Annual GDP components are (Chain Linked Value code / Current Prices code)
 - Gross fixed capital formation (ITR / ITN)
 - Exports of goods and services (XTR / XTN)
 - Imports of goods and services (MTR / MTN)
+
+
 
 
 
