@@ -1,28 +1,23 @@
 # WESP Data Pipeline
 
-- replace the outdated manual download with a more "modern" way to feed data into the **World Economic Forecasting Model** (WEFM) 
-- uses the [SDMX](https://www.sdmx.io/) API Schema to access a range of economic databases from different organisations ([IMF](https://data.imf.org/en), [World Bank](https://data.worldbank.org/) , [OECD](https://ec.europa.eu/eurostat/data/database))
-- coded in R (mostly [Quarto](https://quarto.org/) Markdown Files), with a lot of comments in the files itself to explain whats happening
+A reproducible pipeline for acquiring, cleaning, and structuring macroeconomic data for the United Nations World Economic Forecasting Model (WEFM)
 
+- replaces manual data downloads from websites with a reproducible automated workflow
+- retrieves data via the [SDMX](https://www.sdmx.io/) API standard from international statistical providers ([IMF](https://data.imf.org/en), [World Bank](https://data.worldbank.org/), [Eurostat](https://ec.europa.eu/eurostat/data/database))
+- implemented in R using [Quarto](https://quarto.org/) documents, with extensive in-line documentation
 
+About: 
 
-**Table of Contents:**
-
-* [Workflow](#workflow)
-* [Step-by-Step Instructions](#step-by-step-instructions)
-* [Project Structure](#project-structure)
-* [Data Sources](#data-sources)
-  + [IMF](#imf)
-  + [Eurostat](#eurostat)
-  + [World Bank](#world-bank)
+- GitHub Repository (online Codesharing Platform): [Link](https://github.com/skriptum/WESP-Pipeline/tree/main)
+- Maintainer: Marten W. - Global Economic Monitoring Branch (UN DESA)
 
 
 
 ## Workflow
 
-The basic intuition behind the pipeline is as follows: take some databases, clean them, and take some additional files to format them to the WEFM expecations. Then, output Excel files to be ingested into EViews.
-
-
+The conceptual workflow of the pipeline is to retrieve datasets from external APIs,
+harmonize and transform them into WEFM-compatible structures, and export
+model-ready Excel files for ingestion into EViews.
 
 Here is an example for IMF annual data:
 
@@ -64,6 +59,15 @@ Note: The final output data files are overwritten with each run. That's why ther
 
 ## Step-by-Step Instructions
 
+Requirements:
+
+- R ≥ 4.2
+- RStudio (recommended)
+- Quarto
+- Internet connection for API access
+
+All package dependencies are managed through `renv`.
+
 1. Go to the GitHub Code Repository (https://github.com/skriptum/WESP-Pipeline) and click on "Code > Download ZIP" to download the complete code
 
 2. Unzip the Folder, move it to an appropriate location and open the `WESP_Pipeline.Rproj` file in RStudio
@@ -81,7 +85,7 @@ Note: The final output data files are overwritten with each run. That's why ther
 
 5. Now, youre ready to run the code. The easiest way is to run the "Master" File `run-pipeline.qmd`. This file runs the process for all sources (IMF, WB, EUROSTAT), downloading and processing the data and places the finished files in the `./data/` folder
 
-6. Now, you should check that everything smoothly. Go into `last-successful-run.csv` and take a look at the table. 
+6. Verify that the pipeline executed successfully. Go into `last-successful-run.csv` and take a look at the table. 
 
    - You should see the name of respective files, as well as their last update time and a "Success" in the status column
    - If that is not the case, go into the respective individual files to run them independently and see where they are failing
@@ -90,7 +94,7 @@ Note: The final output data files are overwritten with each run. That's why ther
 
 ## Project Structure
 
-Hres a file tree with a little explanation 
+Below is a simplified overview of the repository structure:
 
 ```
 ├── data                    # data 
